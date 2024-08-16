@@ -11,25 +11,25 @@ import Control.Monad
 
 -- | Instances must satisfy the following laws:
 --
--- * @'lscale' '.' 'join' = 'lscale' '.' 'fmap' 'lscale'@
+-- * @'lact' '.' 'join' = 'lact' '.' 'fmap' 'lact'@
 --
--- * @'lscale' . 'return' = 'id'@
+-- * @'lact' . 'return' = 'id'@
 class (Monad m, Functor f) => LeftModule m f where
-  lscale ::
-    m (f a) -> f a -- ^ left "scalar multiplication"
+  lact ::
+    m (f a) -> f a -- ^ left monad action
 
 -- | Instances must satisfy the following laws:
 --
--- * @'rscale' . 'fmap' 'join' = 'rscale' . 'rscale'@
+-- * @'ract' . 'fmap' 'join' = 'ract' . 'ract'@
 --
--- * @'rscale' . 'fmap' 'return' = 'id'@
+-- * @'ract' . 'fmap' 'return' = 'id'@
 class (Monad m, Functor f) => RightModule m f where
-  rscale ::
-    f (m a) -> f a -- ^ right "scalar multiplication"
+  ract ::
+    f (m a) -> f a -- ^ right monad action
 
--- | Given two monads r and s, an (r, s) bimodule is a functor that is a left module over r and a right module over s, where the two "scalar multiplications" are compatible.
+-- | Given two monads r and s, an (r, s) bimodule is a functor that is a left module over r and a right module over s, where the two actions are compatible.
 --   Instances must satisfy the following law in addition to the laws for @'LeftModule'@ and @'RightModule'@:
 --
--- * @'rscale' . 'lscale' = 'lscale' . 'fmap' 'rscale' = 'biscale'@
+-- * @'ract' . 'lact' = 'lact' . 'fmap' 'ract' = 'biact'@
 class (LeftModule r f, RightModule s f) => BiModule r s f where
-  biscale :: r (f (s a)) -> f a -- ^ two-sided "scalar multiplication"
+  biact :: r (f (s a)) -> f a -- ^ two-sided monad action
