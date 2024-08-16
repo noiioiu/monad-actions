@@ -13,7 +13,7 @@ import Control.Monad
 -- * @'lscale' '.' 'join' = 'lscale' '.' 'fmap' 'lscale'@
 --
 -- * @'lscale' . 'return' = 'id'@
-class LeftModule f m a where
+class Monad m => LeftModule f m a where
   lscale ::
     m (f a) ->
     -- | left "scalar multiplication"
@@ -24,7 +24,7 @@ class LeftModule f m a where
 -- * @'rscale' . 'fmap' 'join' = 'rscale' . 'rscale'@
 --
 -- * @'rscale' . 'fmap' 'return' = 'id'@
-class RightModule f m a where
+class Monad m => RightModule f m a where
   rscale ::
     f (m a) ->
     -- | right "scalar multiplication"
