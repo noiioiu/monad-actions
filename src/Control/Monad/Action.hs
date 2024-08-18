@@ -8,6 +8,7 @@ module Control.Monad.Action
 where
 
 import Control.Monad
+import Data.Functor.Compose
 import Data.Maybe (catMaybes)
 
 -- | Instances must satisfy the following laws:
@@ -60,3 +61,12 @@ instance LeftModule Maybe [] where
 
 instance BiModule Maybe Maybe [] where
   biact = ract . lact
+
+instance (Monad m, Functor f, LeftModule m n) => LeftModule m (Compose n f) where
+  lact = Compose . lact . fmap getCompose
+
+instance (Monad m, Functor f, RightModule m n) => RightModule m (Compose f n) where
+  ract = Compose . fmap ract . getCompose
+
+instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiModule s t (Compose u (Compose f v)) where
+  biact = Compose . fmap (Compose . fmap ract) . lact . fmap (fmap getCompose . getCompose)
