@@ -100,5 +100,7 @@ test-suite monad-actions-test
 
     -- Test dependencies.
     build-depends:
+        QuickCheck,
+        checkers,
         base ^>=4.17.2.1,
         monad-actions

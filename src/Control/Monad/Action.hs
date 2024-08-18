@@ -8,6 +8,7 @@ module Control.Monad.Action
 where
 
 import Control.Monad
+import Data.Maybe (catMaybes)
 
 -- | Instances must satisfy the following laws:
 --
@@ -16,7 +17,9 @@ import Control.Monad
 -- * @'lact' . 'return' = 'id'@
 class (Monad m, Functor f) => LeftModule m f where
   lact ::
-    m (f a) -> f a -- ^ left monad action
+    m (f a) ->
+    -- | left monad action
+    f a
 
 -- | Instances must satisfy the following laws:
 --
@@ -25,11 +28,35 @@ class (Monad m, Functor f) => LeftModule m f where
 -- * @'ract' . 'fmap' 'return' = 'id'@
 class (Monad m, Functor f) => RightModule m f where
   ract ::
-    f (m a) -> f a -- ^ right monad action
+    f (m a) ->
+    -- | right monad action
+    f a
 
 -- | Given two monads r and s, an (r, s) bimodule is a functor that is a left module over r and a right module over s, where the two actions are compatible.
 --   Instances must satisfy the following law in addition to the laws for @'LeftModule'@ and @'RightModule'@:
 --
 -- * @'ract' . 'lact' = 'lact' . 'fmap' 'ract' = 'biact'@
 class (LeftModule r f, RightModule s f) => BiModule r s f where
-  biact :: r (f (s a)) -> f a -- ^ two-sided monad action
+  biact ::
+    r (f (s a)) ->
+    -- | two-sided monad action
+    f a
+
+instance (Monad m) => RightModule m m where
+  ract = join
+
+instance (Monad m) => LeftModule m m where
+  lact = join
+
+instance (Monad m) => BiModule m m m where
+  biact = join . join
+
+instance RightModule Maybe [] where
+  ract = catMaybes
+
+instance LeftModule Maybe [] where
+  lact Nothing = []
+  lact (Just l) = l
+
+instance BiModule Maybe Maybe [] where
+  biact = ract . lact
