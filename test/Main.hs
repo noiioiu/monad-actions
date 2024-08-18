@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
@@ -7,6 +8,7 @@
 module Main (main) where
 
 import Control.Monad.Action
+import Data.Functor.Compose
 import Test.QuickCheck
 import Test.QuickCheck.Checkers
 
@@ -82,8 +84,11 @@ bimodule =
 main :: IO ()
 main =
   mapM_
-    verboseBatch
+    quickBatch
     [ leftmodule @Maybe @[] @Int,
       rightmodule @Maybe @[] @Int,
-      bimodule @Maybe @Maybe @[] @Int
+      bimodule @Maybe @Maybe @[] @Int,
+      leftmodule @[] @(Compose [] ((,) Bool)) @Bool,
+      rightmodule @[] @(Compose ((,) Bool) []) @Bool,
+      bimodule @[] @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool
     ]
