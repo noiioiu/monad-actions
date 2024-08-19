@@ -1,6 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
@@ -8,6 +8,9 @@
 module Main (main) where
 
 import Control.Monad.Action
+import Control.Monad.Reader
+import Control.Monad.State
+import Control.Monad.Writer
 import Data.Functor.Compose
 import Test.QuickCheck
 import Test.QuickCheck.Checkers
@@ -32,8 +35,8 @@ leftmodule =
     leftP :: f a -> Property
     assocP :: m (m (f a)) -> Property
 
-    assocP a = lact (join a) =-= lact (fmap lact a)
     leftP a = lact (return @m a) =-= a
+    assocP a = lact (join a) =-= lact (fmap lact a)
 
 rightmodule ::
   forall m f a.
@@ -55,8 +58,8 @@ rightmodule =
     rightP :: f a -> Property
     assocP :: f (m (m a)) -> Property
 
-    assocP a = ract (fmap join a) =-= ract (ract a)
     rightP a = ract (fmap (return @m) a) =-= a
+    assocP a = ract (fmap join a) =-= ract (ract a)
 
 bimodule ::
   forall s t f a.
@@ -81,6 +84,79 @@ bimodule =
     assoc1P a = biact a =-= ract (lact a)
     assoc2P a = biact a =-= lact (fmap ract a)
 
+instance (CoArbitrary s, Arbitrary (m (a, s)), Function s) => Arbitrary (StateT s m a) where
+  arbitrary = StateT . applyFun <$> arbitrary
+
+instance (Show s, Arbitrary s, EqProp (m (a, s))) => EqProp (StateT s m a) where
+  a =-= b = runStateT a =-= runStateT b
+
+rightmodulestate ::
+  forall m s a.
+  ( Monad m,
+    Arbitrary a,
+    Function s,
+    CoArbitrary s,
+    Arbitrary (m (a, s)),
+    Show s,
+    Show (m (a, s)),
+    Arbitrary (m (m a, s)),
+    Show (m (m a, s)),
+    Arbitrary s,
+    EqProp (m (a, s)),
+    Arbitrary (m (m (m a), s)),
+    Show (m (m (m a), s))
+  ) =>
+  TestBatch
+rightmodulestate =
+  ( "right module laws",
+    [ ("right identity", property rightP),
+      ("associativity", property assocP)
+    ]
+  )
+  where
+    rightP :: Fun s (m (a, s)) -> Property
+    assocP :: Fun s (m (m (m a), s)) -> Property
+
+    rightP a = ract (fmap (return @m) (StateT $ applyFun a)) =-= StateT (applyFun a)
+    assocP a = ract (fmap join (StateT $ applyFun a)) =-= ract (ract (StateT $ applyFun a))
+
+instance (Show s, Arbitrary s, EqProp (m a)) => EqProp (ReaderT s m a) where
+  a =-= b = runReaderT a =-= runReaderT b
+
+rightmodulereader ::
+  forall m s a.
+  ( Monad m,
+    Arbitrary a,
+    Function s,
+    CoArbitrary s,
+    Arbitrary (m a),
+    Arbitrary (m (m (m a))),
+    Show (m a),
+    Show (m (m (m a))),
+    Show s,
+    Arbitrary s,
+    EqProp (m a)
+  ) =>
+  TestBatch
+rightmodulereader =
+  ( "right module laws",
+    [ ("right identity", property rightP),
+      ("associativity", property assocP)
+    ]
+  )
+  where
+    rightP :: Fun s (m a) -> Property
+    assocP :: Fun s (m (m (m a))) -> Property
+
+    rightP a = ract (fmap (return @m) (ReaderT $ applyFun a)) =-= ReaderT (applyFun a)
+    assocP a = ract (fmap join (ReaderT $ applyFun a)) =-= ract (ract (ReaderT $ applyFun a))
+
+instance (Arbitrary (m (a, w))) => Arbitrary (WriterT w m a) where
+  arbitrary = WriterT <$> arbitrary
+
+instance (EqProp (m (a, w))) => EqProp (WriterT w m a) where
+  a =-= b = runWriterT a =-= runWriterT b
+
 main :: IO ()
 main =
   mapM_
@@ -90,5 +166,10 @@ main =
       bimodule @Maybe @Maybe @[] @Int,
       leftmodule @[] @(Compose [] ((,) Bool)) @Bool,
       rightmodule @[] @(Compose ((,) Bool) []) @Bool,
-      bimodule @[] @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool
+      bimodule @[] @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool,
+      rightmodulestate @[] @Int @Char,
+      rightmodulereader @(Either Bool) @Char @Int,
+      leftmodule @[] @(WriterT Bool []) @Int
+      -- , rightmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
+      -- , leftmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
     ]
