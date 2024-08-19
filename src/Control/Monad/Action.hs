@@ -8,8 +8,11 @@ module Control.Monad.Action
 where
 
 import Control.Monad
+import Control.Monad.State
 import Data.Functor.Compose
 import Data.Maybe (catMaybes)
+import Control.Monad.Reader
+import Control.Monad.Writer
 
 -- | Instances must satisfy the following laws:
 --
@@ -70,3 +73,12 @@ instance (Monad m, Functor f, RightModule m n) => RightModule m (Compose f n) wh
 
 instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiModule s t (Compose u (Compose f v)) where
   biact = Compose . fmap (Compose . fmap ract) . lact . fmap (fmap getCompose . getCompose)
+
+instance Monad m => RightModule m (StateT s m) where
+  ract = StateT . fmap (uncurry (flip (fmap . flip (,))) =<<) . runStateT
+
+instance Monad m => RightModule m (ReaderT r m) where
+  ract = ReaderT . fmap join . runReaderT
+
+instance Monad m => LeftModule m (WriterT w m) where
+  lact = WriterT . (runWriterT =<<)
