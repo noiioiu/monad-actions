@@ -11,7 +11,7 @@ import Control.Comonad
 
 -- | Instances must satisfy the following laws:
 --
--- * @'duplicate' '.' 'lcoact' = 'fmap' 'lcoact' ''.'' 'lcoact'@
+-- * @'duplicate' '.' 'lcoact' = 'fmap' 'lcoact' '.' 'lcoact'@
 --
 -- * @'extract' '.' 'lcoact' = 'id'@
 class (Comonad w, Functor f) => LeftComodule w f where
