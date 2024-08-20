@@ -45,6 +45,7 @@ class (LeftModule r f, RightModule s f) => BiModule r s f where
     r (f (s a)) ->
     -- | two-sided monad action
     f a
+  biact = ract . lact
 
 instance (Monad m) => RightModule m m where
   ract = join
@@ -94,7 +95,7 @@ instance (Monad m) => LeftModule m (WriterT w m) where
 --   * @'liftIO' '.' 'join' = 'join' '.' 'fmap' 'liftIO' '.' 'liftIO'@
 --
 --   The left monad action laws can now be easily proved using string diagrams.
---   Functors compose vertically, natural transformations from left to right,
+--   Functors compose from top to bottom, natural transformations from left to right,
 --   @───@ represents @m@, @┈┈┈@ represents @'IO'@, @├@ represents @'return'@ or
 --   @'join'@ depending on the number of inputs, and @┈┈┈►───@ represents @'liftIO'@.
 --   The @'MonadIO'@ laws as string diagrams are:
@@ -126,7 +127,7 @@ instance (Monad m) => LeftModule m (WriterT w m) where
 --
 --   To prove associativity:
 --
---   > ┈┈┈┐                ┈┈►──┐              ┈────┈─►─┐
+--   > ┈┈┈┐                ┈┈►──┐              ┈┈┈┈┈┈┈►─┐
 --   >    ├┈┈►─┐                ├──┐           ┈┈►──┐   ├───
 --   > ┈┈┈┘    ├──────  =  ┈┈►──┘  ├──────  =       ├───┘
 --   > ────────┘           ────────┘           ─────┘
@@ -142,3 +143,70 @@ instance (Monad m) => LeftModule m (WriterT w m) where
 --   = 'lact' '.' 'fmap' 'lact'@
 instance (MonadIO m) => LeftModule IO m where
   lact = join . liftIO
+
+
+
+
+-- | We prove the right module laws using string diagrams, just as in the case
+--   of the left module laws.
+--
+--   The diagram for @'ract'@ is:
+--
+--   > ─────┐
+--   >      ├───
+--   > ┈┈►──┘
+--
+--   To prove the identity law:
+--
+--   > ──────────┐       ──────────┐
+--   >           ├──  =            ├──  =  ──────
+--   >    ├┈┈┈►──┘          ├──────┘
+--
+--   In other words,
+--
+--   @   'ract' '.' 'fmap' 'return'
+--   = 'join' '.' 'fmap' 'liftIO' , 'return'
+--   = 'join' '.' 'fmap' 'liftIO' , 'fmap' 'return'
+--   = 'join' '.' 'fmap' ('liftIO' , 'return')
+--   = 'join' '.' 'fmap' 'return'
+--   = 'id'@
+--
+--   To prove associativity:
+--
+--   > ────────┐           ─────────┐           ─────┐
+--   > ┈┈┈┐    ├──────  =  ┈┈►──┐   ├──────  =       ├───┐
+--   >    ├┈┈►─┘                ├───┘           ┈┈►──┘   ├───
+--   > ┈┈┈┘                ┈┈►──┘               ┈┈┈┈┈┈┈►─┘
+--
+--   In other words,
+--
+--   @  'ract' '.' 'fmap' 'join'
+--   = 'join' '.' 'fmap' 'liftIO' '.' 'fmap' 'join'
+--   = 'join' '.' 'fmap' ('liftIO' '.' 'join')
+--   = 'join' '.' 'fmap' ('join' '.' 'fmap' 'liftIO' '.' 'liftIO')
+--   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'liftIO' '.' 'liftIO')
+--   = 'join' '.' 'join' '.' 'fmap' ('fmap' 'liftIO') '.' 'fmap' ('liftIO')
+--   = 'join' '.' 'fmap' 'liftIO' '.' 'join' '.' 'fmap' 'liftIO'
+--   = 'ract' '.' 'ract'@
+instance (MonadIO m) => RightModule IO m where
+  ract = (liftIO =<<)
+
+-- | We prove the bimodule law using string diagrams, just as in the case
+--   of the left and right module laws:
+--
+--   > ┈┈►─┐            ┈┈┈┈┈┈►─┐
+--   >     ├───┐        ────┐   ├───
+--   > ────┘   ├───  =      ├───┘
+--   > ┈┈┈┈┈┈►─┘        ┈┈►─┘
+--
+--   In other words,
+--
+--   @  'biact'
+--   = 'ract' '.' 'lact'
+--   = 'join' '.' 'fmap' 'liftIO' '.' 'join' '.' 'liftIO'
+--   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'liftIO') '.' 'liftIO'
+--   = 'join' '.' 'fmap' ('join' '.' 'fmap' 'liftIO') '.' 'liftIO'
+--   = 'join' '.' 'fmap' 'ract' '.' 'liftIO'
+--   = 'join' '.' 'liftIO' '.' 'fmap' 'ract'
+--   = 'lact' '.' 'fmap' 'ract'@
+instance (MonadIO m) => BiModule IO IO m
