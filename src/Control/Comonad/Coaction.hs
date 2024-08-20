@@ -40,6 +40,7 @@ class (LeftComodule r f, RightComodule s f) => BiComodule r s f where
     f a ->
     -- | two-sided comonad coaction
     r (f (s a))
+  bicoact = lcoact . rcoact
 
 instance (Comonad w) => LeftComodule w w where
   lcoact = duplicate
