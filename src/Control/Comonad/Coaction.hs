@@ -8,6 +8,7 @@ module Control.Comonad.Coaction
 where
 
 import Control.Comonad
+import Data.Functor.Compose
 
 -- | Instances must satisfy the following laws:
 --
@@ -50,3 +51,11 @@ instance (Comonad w) => RightComodule w w where
 
 instance (Comonad w) => BiComodule w w w where
  bicoact = duplicate . duplicate
+
+instance (Comonad w, Functor f, LeftComodule w v) => LeftComodule w (Compose v f) where
+  lcoact = fmap Compose . lcoact . getCompose
+
+instance (Comonad w, Functor f, RightComodule w v) => RightComodule w (Compose f v) where
+  rcoact = Compose . fmap rcoact . getCompose
+
+instance (Comonad s, Comonad t, Functor f, LeftComodule s u, RightComodule t v) => BiComodule s t (Compose u (Compose f v))
