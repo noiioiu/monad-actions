@@ -79,11 +79,10 @@ instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiMod
 instance (Monad m) => LeftModule m (StateT s m) where
   lact = StateT . (. flip id) . (>>=) . fmap runStateT
 
-
 instance (Monad m) => RightModule m (StateT s m) where
   ract = StateT . fmap (uncurry (flip (fmap . flip (,))) =<<) . runStateT
 
-instance (Monad m) => BiModule m m (StateT s m) where
+instance (Monad m) => BiModule m m (StateT s m)
 
 instance (Monad m) => RightModule m (ReaderT r m) where
   ract = ReaderT . fmap join . runReaderT
