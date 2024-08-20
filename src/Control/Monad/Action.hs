@@ -1,3 +1,5 @@
+{-# LANGUAGE IncoherentInstances #-}
+
 -- | A monad action is a monoid action in the category of endofunctors, what's the problem?
 module Control.Monad.Action
   ( module Control.Monad,
@@ -74,8 +76,14 @@ instance (Monad m, Functor f, RightModule m n) => RightModule m (Compose f n) wh
 
 instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiModule s t (Compose u (Compose f v))
 
+instance (Monad m) => LeftModule m (StateT s m) where
+  lact = StateT . (. flip id) . (>>=) . fmap runStateT
+
+
 instance (Monad m) => RightModule m (StateT s m) where
   ract = StateT . fmap (uncurry (flip (fmap . flip (,))) =<<) . runStateT
+
+instance (Monad m) => BiModule m m (StateT s m) where
 
 instance (Monad m) => RightModule m (ReaderT r m) where
   ract = ReaderT . fmap join . runReaderT
@@ -142,9 +150,6 @@ instance (Monad m) => LeftModule m (WriterT w m) where
 --   = 'lact' '.' 'fmap' 'lact'@
 instance (MonadIO m) => LeftModule IO m where
   lact = join . liftIO
-
-
-
 
 -- | We prove the right module laws using string diagrams, just as in the case
 --   of the left module laws.
