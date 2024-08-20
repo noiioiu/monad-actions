@@ -11,9 +11,9 @@ import Control.Comonad
 
 -- | Instances must satisfy the following laws:
 --
--- * @'duplicate' . 'lcoact' = 'fmap' 'lcoact' '.' 'lcoact'@
+-- * @'duplicate' '.' 'lcoact' = 'fmap' 'lcoact' ''.'' 'lcoact'@
 --
--- * @'extract' . 'lcoact' = 'id'@
+-- * @'extract' '.' 'lcoact' = 'id'@
 class (Comonad w, Functor f) => LeftComodule w f where
   lcoact ::
     f a ->
@@ -22,9 +22,9 @@ class (Comonad w, Functor f) => LeftComodule w f where
 
 -- | Instances must satisfy the following laws:
 --
--- * @'fmap duplicate' . 'rcoact' = 'rcoact' . 'rcoact'@
+-- * @'fmap' 'duplicate' '.' 'rcoact' = 'rcoact' '.' 'rcoact'@
 --
--- * @'fmap extract' . 'lcoact' = id@
+-- * @'fmap' 'extract' '.' 'lcoact' = 'id'@
 class (Comonad w, Functor f) => RightComodule w f where
   rcoact ::
     f a ->
@@ -34,7 +34,7 @@ class (Comonad w, Functor f) => RightComodule w f where
 -- | Given two comonads r and s, an (r, s) bicomodule is a functor that is a left comodule over r and a right comodule over s, where the two coactions are compatible.
 --   Instances must satisfy the following law in addition to the laws for @'LeftComodule'@ and @'RightComodule'@:
 --
--- * @'lcoact' . 'rcoact' = 'fmap' 'rcoact' . 'lcoact' = 'bicoact'@
+-- * @'lcoact' '.' 'rcoact' = 'fmap' 'rcoact' '.' 'lcoact' = 'bicoact'@
 class (LeftComodule r f, RightComodule s f) => BiComodule r s f where
   bicoact ::
     f a ->
