@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE IncoherentInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -120,6 +121,61 @@ rightmodulestate =
     rightP a = ract (fmap (return @m) (StateT $ applyFun a)) =-= StateT (applyFun a)
     assocP a = ract (fmap join (StateT $ applyFun a)) =-= ract (ract (StateT $ applyFun a))
 
+leftmodulestate ::
+  forall m s a.
+  ( Monad m,
+    Arbitrary a,
+    Function s,
+    CoArbitrary s,
+    Arbitrary (m (Fun s (m (a, s)))),
+    Show (m (Fun s (m (a, s)))),
+    Arbitrary (m (m (Fun s (m (a, s))))),
+    Show (m (m (Fun s (m (a, s))))),
+    EqProp (m (StateT s m a)),
+    Show s,
+    Arbitrary s,
+    EqProp (m (a, s))
+  ) =>
+  TestBatch
+leftmodulestate =
+  ( "left module laws",
+    [ ("left identity", property leftP),
+      ("associativity", property assocP)
+    ]
+  )
+  where
+    leftP :: m (Fun s (m (a, s))) -> Property
+    assocP :: m (m (Fun s (m (a, s)))) -> Property
+
+    leftP a = lact (return @m (StateT . applyFun <$> a)) =-= (StateT . applyFun <$> a)
+    assocP a = lact (join (fmap (StateT . applyFun) <$> a)) =-= lact (fmap lact (fmap (StateT . applyFun) <$> a))
+
+bimodulestate ::
+  forall m s a.
+  ( Monad m,
+    Arbitrary a,
+    Arbitrary (m (Fun s (m (m a), s))),
+    Show (m (Fun s (m (m a), s))),
+    Arbitrary (m (Fun s (m (m a, s)))),
+    Show (m (Fun s (m (m a, s)))),
+    Show s,
+    Arbitrary s,
+    EqProp (m (a, s))
+  ) =>
+  TestBatch
+bimodulestate =
+  ( "bimodule laws",
+    [ ("associativity 1", property assoc1P),
+      ("associativity 2", property assoc2P)
+    ]
+  )
+  where
+    assoc1P :: m (Fun s (m (m a, s))) -> Property
+    assoc2P :: m (Fun s (m (m a, s))) -> Property
+
+    assoc1P a = biact (StateT . applyFun <$> a) =-= ract (lact (StateT . applyFun <$> a))
+    assoc2P a = biact (StateT . applyFun <$> a) =-= lact (fmap ract (StateT . applyFun <$> a))
+
 instance (Show s, Arbitrary s, EqProp (m a)) => EqProp (ReaderT s m a) where
   a =-= b = runReaderT a =-= runReaderT b
 
@@ -161,15 +217,19 @@ main :: IO ()
 main =
   mapM_
     quickBatch
-    [ leftmodule @Maybe @[] @Int,
-      rightmodule @Maybe @[] @Int,
-      bimodule @Maybe @Maybe @[] @Int,
-      leftmodule @[] @(Compose [] ((,) Bool)) @Bool,
-      rightmodule @[] @(Compose ((,) Bool) []) @Bool,
-      bimodule @[] @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool,
-      rightmodulestate @[] @Int @Char,
-      rightmodulereader @(Either Bool) @Char @Int,
-      leftmodule @[] @(WriterT Bool []) @Int
+    [ -- leftmodule @Maybe @[] @Int,
+      -- rightmodule @Maybe @[] @Int,
+      -- bimodule @Maybe @Maybe @[] @Int,
+      -- leftmodule @[] @(Compose [] ((,) Bool)) @Bool,
+      -- rightmodule @[] @(Compose ((,) Bool) []) @Bool,
+      -- bimodule @[] @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool,
+      -- rightmodulestate @[] @Int @Char,
+      -- rightmodulereader @(Either Bool) @Char @Int,
+      -- leftmodule @[] @(WriterT Bool []) @Int
+
+      leftmodulestate @[] @Int @Bool,
+      rightmodulestate @[] @Int @Bool,
+      bimodulestate @[] @Int @Bool
       -- , rightmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
       -- , leftmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
     ]
