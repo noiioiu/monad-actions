@@ -59,7 +59,8 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  Control.Monad.Action
+    exposed-modules:  Control.Monad.Action,
+                      Control.Comonad.Coaction
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -69,6 +70,7 @@ library
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.17.2.1,
+                      comonad,
                       mtl
 
     -- Directories containing source files.
