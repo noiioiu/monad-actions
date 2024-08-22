@@ -9,6 +9,7 @@ where
 
 import Control.Comonad
 import Data.Functor.Compose
+import Control.Comonad.Trans.Class
 
 -- | Instances must satisfy the following laws:
 --
@@ -59,3 +60,20 @@ instance (Comonad w, Functor f, RightComodule w v) => RightComodule w (Compose f
   rcoact = Compose . fmap rcoact . getCompose
 
 instance (Comonad s, Comonad t, Functor f, LeftComodule s u, RightComodule t v) => BiComodule s t (Compose u (Compose f v))
+
+-- | No laws are given in the dicumentation for @'ComonadTrans'@, but we suppose they satisfy the following laws,
+--   dual to the laws for @'MonadTrans'@:
+--
+--   * @'extract' '.' 'lower' = 'extract'@
+--
+--   * @'duplicate' '.' 'lower' = 'lower' '.' 'fmap' 'lower' . 'duplicate'@
+--
+--   The proofs of the comodule laws may be obtained by looking at the corresponding
+--   proofs of the module laws in a mirror.
+instance (ComonadTrans t, Comonad m, Comonad (t m)) => LeftComodule m (t m) where
+  lcoact = lower . duplicate
+
+instance (ComonadTrans t, Comonad m, Comonad (t m)) => RightComodule m (t m) where
+  rcoact = fmap lower . duplicate
+
+instance (ComonadTrans t, Comonad m, Comonad (t m)) => BiComodule m m (t m) where
