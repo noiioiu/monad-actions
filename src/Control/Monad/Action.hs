@@ -1,5 +1,3 @@
-{-# LANGUAGE IncoherentInstances #-}
-
 -- | A monad action is a monoid action in the category of endofunctors, what's the problem?
 module Control.Monad.Action
   ( module Control.Monad,
@@ -10,11 +8,9 @@ module Control.Monad.Action
 where
 
 import Control.Monad
-import Control.Monad.Reader
-import Control.Monad.State
-import Control.Monad.Writer
 import Data.Functor.Compose
 import Data.Maybe (catMaybes)
+import Control.Monad.Trans
 
 -- | Instances must satisfy the following laws:
 --
@@ -78,35 +74,21 @@ instance (Monad m, Functor f, RightModule m n) => RightModule m (Compose f n) wh
 
 instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiModule s t (Compose u (Compose f v))
 
-instance (Monad m) => LeftModule m (StateT s m) where
-  lact = StateT . (. flip id) . (>>=) . fmap runStateT
-
-instance (Monad m) => RightModule m (StateT s m) where
-  ract = StateT . fmap (uncurry (flip (fmap . flip (,))) =<<) . runStateT
-
-instance (Monad m) => BiModule m m (StateT s m)
-
-instance (Monad m) => RightModule m (ReaderT r m) where
-  ract = ReaderT . fmap join . runReaderT
-
-instance (Monad m) => LeftModule m (WriterT w m) where
-  lact = WriterT . (runWriterT =<<)
-
--- | @'MonadIO'@ instances are required to satisfy these laws in addition to the @'Monad'@ laws:
+-- | @'MonadTrans'@ instances are required to satisfy these laws:
 --
---   * @'liftIO' '.' 'pure' = 'pure'@
+--   * @'lift' '.' 'pure' = 'pure'@
 --
---   * @'liftIO' (m '>>=' f) = 'liftIO' m '>>=' ('liftIO' '.' f)@
+--   * @'lift' (m '>>=' f) = 'lift' m '>>=' ('lift' '.' f)@
 --
 --   Restating the second law in terms of @'join'@:
 --
---   * @'liftIO' '.' 'join' = 'join' '.' 'fmap' 'liftIO' '.' 'liftIO'@
+--   * @'lift' '.' 'join' = 'join' '.' 'fmap' 'lift' '.' 'lift'@
 --
 --   The left monad action laws can now be easily proved using string diagrams.
 --   Functors compose from top to bottom, natural transformations from left to right,
---   @───@ represents @m@, @┈┈┈@ represents @'IO'@, @├@ represents @'pure'@ or
---   @'join'@ depending on the number of inputs, and @┈┈┈►───@ represents @'liftIO'@.
---   The @'MonadIO'@ laws as string diagrams are:
+--   @───@ represents @t m@, @┈┈┈@ represents @m@, @├@ represents @'pure'@ or
+--   @'join'@ depending on the number of inputs, and @┈┈┈►───@ represents @'lift'@.
+--   The @'MonadTrans'@ laws as string diagrams are:
 --
 --   > ├┈┈┈►───  = ├──────
 --
@@ -122,35 +104,36 @@ instance (Monad m) => LeftModule m (WriterT w m) where
 --
 --   To prove the identity law:
 --
---   >    ├┈┈┈►──┐          ├──────┐
---   >           ├──  =            ├──  =  ──────
---   > ──────────┘       ──────────┘
+--   >   ├┈┈►──┐          ├─────┐
+--   >         ├───  =          ├───  =  ──────
+--   > ────────┘        ────────┘
 --
 --   In other words,
 --
 --   @   'lact' '.' 'pure'
---   = 'join' '.' 'liftIO' '.' 'pure'
+--   = 'join' '.' 'lift' '.' 'pure'
 --   = 'join' '.' 'pure'
 --   = 'id'@
 --
 --   To prove associativity:
 --
---   > ┈┈┈┐                ┈┈►──┐              ┈┈┈┈┈┈┈►─┐
---   >    ├┈┈►─┐                ├──┐           ┈┈►──┐   ├───
---   > ┈┈┈┘    ├──────  =  ┈┈►──┘  ├──────  =       ├───┘
---   > ────────┘           ────────┘           ─────┘
+--   > ┈┈┈┐              ┈┈►──┐
+--   >    ├┈┈►─┐              ├──┐         ┈┈┈┈┈┈┈►─┐
+--   > ┈┈┈┘    ├────  =  ┈┈►──┘  ├────  =  ┈┈►──┐   ├────
+--   > ────────┘         ────────┘              ├───┘
+--   >                                     ─────┘
 --
 --   In other words,
 --
 --   @  'lact' '.' 'join'
---   = 'join' '.' 'liftIO' '.' 'join'
---   = 'join' '.' 'join' '.' 'fmap' 'liftIO' '.' 'liftIO'
---   = 'join' '.' 'fmap' 'join' '.' 'fmap' 'liftIO' '.' 'liftIO'
---   = 'join' '.' 'fmap' ('join' '.' 'liftIO') '.' 'liftIO'
---   = 'join' '.' 'liftIO' '.' 'fmap' ('join' '.' 'liftIO')
+--   = 'join' '.' 'lift' '.' 'join'
+--   = 'join' '.' 'join' '.' 'fmap' 'lift' '.' 'lift'
+--   = 'join' '.' 'fmap' 'join' '.' 'fmap' 'lift' '.' 'lift'
+--   = 'join' '.' 'fmap' ('join' '.' 'lift') '.' 'lift'
+--   = 'join' '.' 'lift' '.' 'fmap' ('join' '.' 'lift')
 --   = 'lact' '.' 'fmap' 'lact'@
-instance (MonadIO m) => LeftModule IO m where
-  lact = join . liftIO
+instance (MonadTrans t, Monad m, Monad (t m)) => LeftModule m (t m) where
+  lact = join . lift
 
 -- | We prove the right module laws using string diagrams, just as in the case
 --   of the left module laws.
@@ -163,55 +146,57 @@ instance (MonadIO m) => LeftModule IO m where
 --
 --   To prove the identity law:
 --
---   > ──────────┐       ──────────┐
---   >           ├──  =            ├──  =  ──────
---   >    ├┈┈┈►──┘          ├──────┘
+--   > ────────┐        ────────┐
+--   >         ├───  =          ├───  =  ──────
+--   >   ├┈┈►──┘          ├─────┘
 --
 --   In other words,
 --
 --   @   'ract' '.' 'fmap' 'pure'
---   = 'join' '.' 'fmap' 'liftIO' , 'pure'
---   = 'join' '.' 'fmap' 'liftIO' , 'fmap' 'pure'
---   = 'join' '.' 'fmap' ('liftIO' , 'pure')
+--   = 'join' '.' 'fmap' 'lift' , 'pure'
+--   = 'join' '.' 'fmap' 'lift' , 'fmap' 'pure'
+--   = 'join' '.' 'fmap' ('lift' , 'pure')
 --   = 'join' '.' 'fmap' 'pure'
 --   = 'id'@
 --
 --   To prove associativity:
 --
---   > ────────┐           ─────────┐           ─────┐
---   > ┈┈┈┐    ├──────  =  ┈┈►──┐   ├──────  =       ├───┐
---   >    ├┈┈►─┘                ├───┘           ┈┈►──┘   ├───
---   > ┈┈┈┘                ┈┈►──┘               ┈┈┈┈┈┈┈►─┘
+--   >                                      ─────┐
+--   > ────────┐         ─────────┐              ├───┐
+--   > ┈┈┈┐    ├────  =  ┈┈►──┐   ├────  =  ┈┈►──┘   ├────
+--   >    ├┈┈►─┘              ├───┘         ┈┈┈┈┈┈┈►─┘
+--   > ┈┈┈┘              ┈┈►──┘
 --
 --   In other words,
 --
 --   @  'ract' '.' 'fmap' 'join'
---   = 'join' '.' 'fmap' 'liftIO' '.' 'fmap' 'join'
---   = 'join' '.' 'fmap' ('liftIO' '.' 'join')
---   = 'join' '.' 'fmap' ('join' '.' 'fmap' 'liftIO' '.' 'liftIO')
---   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'liftIO' '.' 'liftIO')
---   = 'join' '.' 'join' '.' 'fmap' ('fmap' 'liftIO') '.' 'fmap' ('liftIO')
---   = 'join' '.' 'fmap' 'liftIO' '.' 'join' '.' 'fmap' 'liftIO'
+--   = 'join' '.' 'fmap' 'lift' '.' 'fmap' 'join'
+--   = 'join' '.' 'fmap' ('lift' '.' 'join')
+--   = 'join' '.' 'fmap' ('join' '.' 'fmap' 'lift' '.' 'lift')
+--   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'lift' '.' 'lift')
+--   = 'join' '.' 'join' '.' 'fmap' ('fmap' 'lift') '.' 'fmap' ('lift')
+--   = 'join' '.' 'fmap' 'lift' '.' 'join' '.' 'fmap' 'lift'
 --   = 'ract' '.' 'ract'@
-instance (MonadIO m) => RightModule IO m where
-  ract = (liftIO =<<)
+instance (MonadTrans t, Monad m, Monad (t m)) => RightModule m (t m) where
+  ract = (lift =<<)
 
 -- | We prove the bimodule law using string diagrams, just as in the case
 --   of the left and right module laws:
 --
---   > ┈┈►─┐            ┈┈┈┈┈┈►─┐
---   >     ├───┐        ────┐   ├───
---   > ────┘   ├───  =      ├───┘
---   > ┈┈┈┈┈┈►─┘        ┈┈►─┘
+--   > ┈┈►─┐
+--   >     ├───┐          ┈┈┈┈┈┈►─┐
+--   > ────┘   ├────  =   ────┐   ├────
+--   > ┈┈┈┈┈┈►─┘              ├───┘
+--   >                    ┈┈►─┘
 --
 --   In other words,
 --
 --   @  'biact'
 --   = 'ract' '.' 'lact'
---   = 'join' '.' 'fmap' 'liftIO' '.' 'join' '.' 'liftIO'
---   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'liftIO') '.' 'liftIO'
---   = 'join' '.' 'fmap' ('join' '.' 'fmap' 'liftIO') '.' 'liftIO'
---   = 'join' '.' 'fmap' 'ract' '.' 'liftIO'
---   = 'join' '.' 'liftIO' '.' 'fmap' 'ract'
+--   = 'join' '.' 'fmap' 'lift' '.' 'join' '.' 'lift'
+--   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'lift') '.' 'lift'
+--   = 'join' '.' 'fmap' ('join' '.' 'fmap' 'lift') '.' 'lift'
+--   = 'join' '.' 'fmap' 'ract' '.' 'lift'
+--   = 'join' '.' 'lift' '.' 'fmap' 'ract'
 --   = 'lact' '.' 'fmap' 'ract'@
-instance (MonadIO m) => BiModule IO IO m
+instance (MonadTrans t, Monad m, Monad (t m)) => BiModule m m (t m) where
