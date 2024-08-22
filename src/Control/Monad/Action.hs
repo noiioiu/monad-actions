@@ -20,7 +20,7 @@ import Data.Maybe (catMaybes)
 --
 -- * @'lact' '.' 'join' = 'lact' '.' 'fmap' 'lact'@
 --
--- * @'lact' '.' 'return' = 'id'@
+-- * @'lact' '.' 'pure' = 'id'@
 class (Monad m, Functor f) => LeftModule m f where
   lact ::
     m (f a) ->
@@ -31,7 +31,7 @@ class (Monad m, Functor f) => LeftModule m f where
 --
 -- * @'ract' '.' 'fmap' 'join' = 'ract' '.' 'ract'@
 --
--- * @'ract' '.' 'fmap' 'return' = 'id'@
+-- * @'ract' '.' 'fmap' 'pure' = 'id'@
 class (Monad m, Functor f) => RightModule m f where
   ract ::
     f (m a) ->
@@ -62,11 +62,13 @@ instance RightModule Maybe [] where
   ract = catMaybes
 
 instance LeftModule Maybe [] where
-  lact Nothing = []
-  lact (Just l) = l
+  lact = concat
 
-instance BiModule Maybe Maybe [] where
-  biact = ract . lact
+instance BiModule Maybe Maybe []
+
+instance BiModule Maybe [] []
+
+instance BiModule [] Maybe []
 
 instance (Monad m, Functor f, LeftModule m n) => LeftModule m (Compose n f) where
   lact = Compose . lact . fmap getCompose
@@ -92,7 +94,7 @@ instance (Monad m) => LeftModule m (WriterT w m) where
 
 -- | @'MonadIO'@ instances are required to satisfy these laws in addition to the @'Monad'@ laws:
 --
---   * @'liftIO' '.' 'return' = 'return'@
+--   * @'liftIO' '.' 'pure' = 'pure'@
 --
 --   * @'liftIO' (m '>>=' f) = 'liftIO' m '>>=' ('liftIO' '.' f)@
 --
@@ -102,7 +104,7 @@ instance (Monad m) => LeftModule m (WriterT w m) where
 --
 --   The left monad action laws can now be easily proved using string diagrams.
 --   Functors compose from top to bottom, natural transformations from left to right,
---   @───@ represents @m@, @┈┈┈@ represents @'IO'@, @├@ represents @'return'@ or
+--   @───@ represents @m@, @┈┈┈@ represents @'IO'@, @├@ represents @'pure'@ or
 --   @'join'@ depending on the number of inputs, and @┈┈┈►───@ represents @'liftIO'@.
 --   The @'MonadIO'@ laws as string diagrams are:
 --
@@ -126,9 +128,9 @@ instance (Monad m) => LeftModule m (WriterT w m) where
 --
 --   In other words,
 --
---   @   'lact' '.' 'return'
---   = 'join' '.' 'liftIO' '.' 'return'
---   = 'join' '.' 'return'
+--   @   'lact' '.' 'pure'
+--   = 'join' '.' 'liftIO' '.' 'pure'
+--   = 'join' '.' 'pure'
 --   = 'id'@
 --
 --   To prove associativity:
@@ -167,11 +169,11 @@ instance (MonadIO m) => LeftModule IO m where
 --
 --   In other words,
 --
---   @   'ract' '.' 'fmap' 'return'
---   = 'join' '.' 'fmap' 'liftIO' , 'return'
---   = 'join' '.' 'fmap' 'liftIO' , 'fmap' 'return'
---   = 'join' '.' 'fmap' ('liftIO' , 'return')
---   = 'join' '.' 'fmap' 'return'
+--   @   'ract' '.' 'fmap' 'pure'
+--   = 'join' '.' 'fmap' 'liftIO' , 'pure'
+--   = 'join' '.' 'fmap' 'liftIO' , 'fmap' 'pure'
+--   = 'join' '.' 'fmap' ('liftIO' , 'pure')
+--   = 'join' '.' 'fmap' 'pure'
 --   = 'id'@
 --
 --   To prove associativity:
