@@ -36,7 +36,7 @@ leftmodule =
     leftP :: f a -> Property
     assocP :: m (m (f a)) -> Property
 
-    leftP a = lact (return @m a) =-= a
+    leftP a = lact (pure @m a) =-= a
     assocP a = lact (join a) =-= lact (fmap lact a)
 
 rightmodule ::
@@ -59,7 +59,7 @@ rightmodule =
     rightP :: f a -> Property
     assocP :: f (m (m a)) -> Property
 
-    rightP a = ract (fmap (return @m) a) =-= a
+    rightP a = ract (fmap (pure @m) a) =-= a
     assocP a = ract (fmap join a) =-= ract (ract a)
 
 bimodule ::
@@ -118,7 +118,7 @@ rightmodulestate =
     rightP :: Fun s (m (a, s)) -> Property
     assocP :: Fun s (m (m (m a), s)) -> Property
 
-    rightP a = ract (fmap (return @m) (StateT $ applyFun a)) =-= StateT (applyFun a)
+    rightP a = ract (fmap (pure @m) (StateT $ applyFun a)) =-= StateT (applyFun a)
     assocP a = ract (fmap join (StateT $ applyFun a)) =-= ract (ract (StateT $ applyFun a))
 
 leftmodulestate ::
@@ -147,7 +147,7 @@ leftmodulestate =
     leftP :: m (Fun s (m (a, s))) -> Property
     assocP :: m (m (Fun s (m (a, s)))) -> Property
 
-    leftP a = lact (return @m (StateT . applyFun <$> a)) =-= (StateT . applyFun <$> a)
+    leftP a = lact (pure @m (StateT . applyFun <$> a)) =-= (StateT . applyFun <$> a)
     assocP a = lact (join (fmap (StateT . applyFun) <$> a)) =-= lact (fmap lact (fmap (StateT . applyFun) <$> a))
 
 bimodulestate ::
@@ -204,7 +204,7 @@ rightmodulereader =
     rightP :: Fun s (m a) -> Property
     assocP :: Fun s (m (m (m a))) -> Property
 
-    rightP a = ract (fmap (return @m) (ReaderT $ applyFun a)) =-= ReaderT (applyFun a)
+    rightP a = ract (fmap (pure @m) (ReaderT $ applyFun a)) =-= ReaderT (applyFun a)
     assocP a = ract (fmap join (ReaderT $ applyFun a)) =-= ract (ract (ReaderT $ applyFun a))
 
 instance (Arbitrary (m (a, w))) => Arbitrary (WriterT w m a) where
@@ -217,19 +217,29 @@ main :: IO ()
 main =
   mapM_
     quickBatch
-    [ -- leftmodule @Maybe @[] @Int,
-      -- rightmodule @Maybe @[] @Int,
-      -- bimodule @Maybe @Maybe @[] @Int,
-      -- leftmodule @[] @(Compose [] ((,) Bool)) @Bool,
-      -- rightmodule @[] @(Compose ((,) Bool) []) @Bool,
-      -- bimodule @[] @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool,
-      -- rightmodulestate @[] @Int @Char,
-      -- rightmodulereader @(Either Bool) @Char @Int,
-      -- leftmodule @[] @(WriterT Bool []) @Int
+    [ leftmodule @Maybe @[] @Int,
+      rightmodule @Maybe @[] @Int,
+      bimodule @Maybe @Maybe @[] @Int,
+      leftmodule @[] @(Compose [] ((,) Bool)) @Bool,
+      rightmodule @[] @(Compose ((,) Bool) []) @Bool,
+      bimodule @[] @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool,
 
-      leftmodulestate @[] @Int @Bool,
-      rightmodulestate @[] @Int @Bool,
-      bimodulestate @[] @Int @Bool
-      -- , rightmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
-      -- , leftmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
+      leftmodule @Maybe @[] @Int,
+      rightmodule @Maybe @[] @Int,
+
+      bimodule @Maybe @Maybe @[] @Int,
+      bimodule @Maybe @[] @[] @Int,
+      bimodule @[] @Maybe @[] @Int,
+      bimodule @[] @[] @[] @Int,
+
+      rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char,
+      rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char,
+      rightmodulereader @(Either Bool) @Char @Int,
+
+      leftmodulestate @(Writer (Sum Int)) @Int @Bool,
+      rightmodulestate @(Writer (Sum Int)) @Int @Bool,
+      rightmodulestate @(Either Bool) @Int @Bool,
+      bimodulestate @(WriterT (Sum Int) Maybe) @Int @Bool
+      --, rightmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
+      --, leftmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
     ]
