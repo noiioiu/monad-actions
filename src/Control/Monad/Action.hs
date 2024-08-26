@@ -1,4 +1,7 @@
 -- | A monad action is a monoid action in the category of endofunctors, what's the problem?
+
+{-# LANGUAGE IncoherentInstances #-}
+
 module Control.Monad.Action
   ( module Control.Monad,
     LeftModule (..),
@@ -8,9 +11,23 @@ module Control.Monad.Action
 where
 
 import Control.Monad
+import Control.Monad.Trans
+import Control.Monad.Trans.Except
+import Control.Monad.Trans.Identity
+import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Reader
+import Control.Monad.Trans.Select
+import Control.Monad.Trans.State.Lazy qualified as L
+import Control.Monad.Trans.State.Strict qualified as S
+import Control.Monad.Trans.Writer.CPS qualified as C
+import Control.Monad.Trans.Writer.Lazy qualified as L
+import Control.Monad.Trans.Writer.Strict qualified as S
 import Data.Functor.Compose
 import Data.Maybe (catMaybes)
-import Control.Monad.Trans
+import Control.Monad.Trans.Accum
+import Control.Monad.Trans.Cont
+import Control.Monad.RWS.Lazy qualified as L
+import Control.Monad.RWS.Strict qualified as S
 
 -- | Instances must satisfy the following laws:
 --
@@ -132,8 +149,21 @@ instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiMod
 --   = 'join' '.' 'fmap' ('join' '.' 'lift') '.' 'lift'
 --   = 'join' '.' 'lift' '.' 'fmap' ('join' '.' 'lift')
 --   = 'lact' '.' 'fmap' 'lact'@
-instance (MonadTrans t, Monad m, Monad (t m)) => LeftModule m (t m) where
-  lact = join . lift
+--
+instance (Monad m) => LeftModule m (MaybeT m) where lact = join . lift
+instance (Monad m) => LeftModule m (ExceptT e m) where lact = join . lift
+instance (Monad m) => LeftModule m (IdentityT m) where lact = join . lift
+instance (Monad m) => LeftModule m (ReaderT r m) where lact = join . lift
+instance (Monad m) => LeftModule m (SelectT r m) where lact = join . lift
+instance (Monad m) => LeftModule m (L.StateT r m) where lact = join . lift
+instance (Monad m) => LeftModule m (S.StateT r m) where lact = join . lift
+instance (Monad m) => LeftModule m (C.WriterT w m) where lact = join . lift
+instance (Monad m, Monoid w) => LeftModule m (S.WriterT w m) where lact = join . lift
+instance (Monad m, Monoid w) => LeftModule m (L.WriterT w m) where lact = join . lift
+instance (Monad m, Monoid w) => LeftModule m (AccumT w m) where lact = join . lift
+instance (Monad m) => LeftModule m (ContT r m) where lact = join . lift
+instance (Monad m, Monoid w) => LeftModule m (L.RWST r w s m) where lact = join . lift
+instance (Monad m, Monoid w) => LeftModule m (S.RWST r w s m) where lact = join . lift
 
 -- | We prove the right module laws using string diagrams, just as in the case
 --   of the left module laws.
@@ -177,8 +207,21 @@ instance (MonadTrans t, Monad m, Monad (t m)) => LeftModule m (t m) where
 --   = 'join' '.' 'join' '.' 'fmap' ('fmap' 'lift') '.' 'fmap' ('lift')
 --   = 'join' '.' 'fmap' 'lift' '.' 'join' '.' 'fmap' 'lift'
 --   = 'ract' '.' 'ract'@
-instance (MonadTrans t, Monad m, Monad (t m)) => RightModule m (t m) where
-  ract = (lift =<<)
+  
+instance (Monad m) => RightModule m (MaybeT m) where ract = (lift =<<)
+instance (Monad m) => RightModule m (ExceptT e m) where ract = (lift =<<)
+instance (Monad m) => RightModule m (IdentityT m) where ract = (lift =<<)
+instance (Monad m) => RightModule m (ReaderT r m) where ract = (lift =<<)
+instance (Monad m) => RightModule m (SelectT r m) where ract = (lift =<<)
+instance (Monad m) => RightModule m (L.StateT r m) where ract = (lift =<<)
+instance (Monad m) => RightModule m (S.StateT r m) where ract = (lift =<<)
+instance (Monad m) => RightModule m (C.WriterT w m) where ract = (lift =<<)
+instance (Monad m, Monoid w) => RightModule m (S.WriterT w m) where ract = (lift =<<)
+instance (Monad m, Monoid w) => RightModule m (L.WriterT w m) where ract = (lift =<<)
+instance (Monad m, Monoid w) => RightModule m (AccumT w m) where ract = (lift =<<)
+instance (Monad m) => RightModule m (ContT r m) where ract = (lift =<<)
+instance (Monad m, Monoid w) => RightModule m (L.RWST r w s m) where ract = (lift =<<)
+instance (Monad m, Monoid w) => RightModule m (S.RWST r w s m) where ract = (lift =<<)
 
 -- | We prove the bimodule law using string diagrams, just as in the case
 --   of the left and right module laws:
@@ -199,4 +242,18 @@ instance (MonadTrans t, Monad m, Monad (t m)) => RightModule m (t m) where
 --   = 'join' '.' 'fmap' 'ract' '.' 'lift'
 --   = 'join' '.' 'lift' '.' 'fmap' 'ract'
 --   = 'lact' '.' 'fmap' 'ract'@
-instance (MonadTrans t, Monad m, Monad (t m)) => BiModule m m (t m) where
+
+instance (Monad m) => BiModule m m (MaybeT m)
+instance (Monad m) => BiModule m m (ExceptT e m)
+instance (Monad m) => BiModule m m (IdentityT m)
+instance (Monad m) => BiModule m m (ReaderT r m)
+instance (Monad m) => BiModule m m (SelectT r m)
+instance (Monad m) => BiModule m m (L.StateT r m)
+instance (Monad m) => BiModule m m (S.StateT r m)
+instance (Monad m) => BiModule m m (C.WriterT w m)
+instance (Monad m, Monoid w) => BiModule m m (S.WriterT w m)
+instance (Monad m, Monoid w) => BiModule m m (L.WriterT w m)
+instance (Monad m, Monoid w) => BiModule m m (AccumT w m)
+instance (Monad m) => BiModule m m (ContT r m)
+instance (Monad m, Monoid w) => BiModule m m (L.RWST r w s m)
+instance (Monad m, Monoid w) => BiModule m m (S.RWST r w s m)

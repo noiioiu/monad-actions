@@ -1,9 +1,10 @@
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE IncoherentInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# LANGUAGE UndecidableInstances #-}
 
 module Main (main) where
 
@@ -221,24 +222,21 @@ main =
       bimodule @Maybe @Maybe @[] @Int,
       leftmodule @[] @(Compose [] ((,) Bool)) @Bool,
       rightmodule @Maybe @(Compose ((,) Bool) []) @Bool,
-      bimodule @[] @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool,
-
+      bimodule @Maybe @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool,
       leftmodule @Maybe @[] @Int,
       rightmodule @Maybe @[] @Int,
-
       bimodule @Maybe @Maybe @[] @Int,
       bimodule @Maybe @[] @[] @Int,
       bimodule @[] @Maybe @[] @Int,
       bimodule @[] @[] @[] @Int
+      -- rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char,
+      -- rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char,
+      -- rightmodulereader @(Either Bool) @Char @Int,
 
-      --rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char,
-      --rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char,
-      --rightmodulereader @(Either Bool) @Char @Int,
-
-      --leftmodulestate @(Writer (Sum Int)) @Int @Bool,
-      --rightmodulestate @(Writer (Sum Int)) @Int @Bool,
-      --rightmodulestate @(Either Bool) @Int @Bool,
-      --bimodulestate @(WriterT (Sum Int) Maybe) @Int @Bool
-      --, rightmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
-      --, leftmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
+      -- leftmodulestate @(Writer (Sum Int)) @Int @Bool,
+      -- rightmodulestate @(Writer (Sum Int)) @Int @Bool,
+      -- rightmodulestate @(Either Bool) @Int @Bool,
+      -- bimodulestate @(WriterT (Sum Int) Maybe) @Int @Bool
+      -- , rightmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
+      -- , leftmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
     ]
