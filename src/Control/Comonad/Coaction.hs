@@ -8,8 +8,12 @@ module Control.Comonad.Coaction
 where
 
 import Control.Comonad
-import Data.Functor.Compose
 import Control.Comonad.Trans.Class
+import Control.Comonad.Trans.Env
+import Control.Comonad.Trans.Identity
+import Control.Comonad.Trans.Store
+import Control.Comonad.Trans.Traced
+import Data.Functor.Compose
 
 -- | Instances must satisfy the following laws:
 --
@@ -51,7 +55,7 @@ instance (Comonad w) => RightComodule w w where
   rcoact = duplicate
 
 instance (Comonad w) => BiComodule w w w where
- bicoact = duplicate . duplicate
+  bicoact = duplicate . duplicate
 
 instance (Comonad w, Functor f, LeftComodule w v) => LeftComodule w (Compose v f) where
   lcoact = fmap Compose . lcoact . getCompose
@@ -70,10 +74,18 @@ instance (Comonad s, Comonad t, Functor f, LeftComodule s u, RightComodule t v) 
 --
 --   The proofs of the comodule laws may be obtained by looking at the corresponding
 --   proofs of the module laws in a mirror.
-instance (ComonadTrans t, Comonad m, Comonad (t m)) => LeftComodule m (t m) where
-  lcoact = lower . duplicate
 
-instance (ComonadTrans t, Comonad m, Comonad (t m)) => RightComodule m (t m) where
-  rcoact = fmap lower . duplicate
+instance (Comonad w) => LeftComodule w (IdentityT w) where lcoact = lower . duplicate
+instance (Comonad w) => LeftComodule w (EnvT e w) where lcoact = lower . duplicate
+instance (Comonad w) => LeftComodule w (StoreT s w) where lcoact = lower . duplicate
+instance (Comonad w, Monoid m) => LeftComodule w (TracedT m w) where lcoact = lower . duplicate
 
-instance (ComonadTrans t, Comonad m, Comonad (t m)) => BiComodule m m (t m) where
+instance (Comonad m) => RightComodule m (IdentityT m) where rcoact = fmap lower . duplicate
+instance (Comonad m) => RightComodule m (EnvT e m) where rcoact = fmap lower . duplicate
+instance (Comonad m) => RightComodule m (StoreT s m) where rcoact = fmap lower . duplicate
+instance (Comonad w, Monoid m) => RightComodule w (TracedT m w) where rcoact = fmap lower . duplicate
+
+instance (Comonad m) => BiComodule m m (IdentityT m)
+instance (Comonad m) => BiComodule m m (EnvT e m)
+instance (Comonad m) => BiComodule m m (StoreT s m)
+instance (Comonad w, Monoid m) => BiComodule w w (TracedT m w)
