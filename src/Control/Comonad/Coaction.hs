@@ -4,6 +4,9 @@ module Control.Comonad.Coaction
     LeftComodule (..),
     RightComodule (..),
     BiComodule (..),
+    comonadTransLCoscale,
+    comonadTransRCoscale,
+    comonadTransBiCoscale,
   )
 where
 
@@ -74,18 +77,26 @@ instance (Comonad s, Comonad t, Functor f, LeftComodule s u, RightComodule t v) 
 --
 --   The proofs of the comodule laws may be obtained by looking at the corresponding
 --   proofs of the module laws in a mirror.
+comonadTransLCoscale :: (Comonad w, ComonadTrans t, Comonad (t w)) => t w a -> w (t w a)
+comonadTransLCoscale = lower . duplicate
 
-instance (Comonad w) => LeftComodule w (IdentityT w) where lcoact = lower . duplicate
-instance (Comonad w) => LeftComodule w (EnvT e w) where lcoact = lower . duplicate
-instance (Comonad w) => LeftComodule w (StoreT s w) where lcoact = lower . duplicate
-instance (Comonad w, Monoid m) => LeftComodule w (TracedT m w) where lcoact = lower . duplicate
+instance (Comonad w) => LeftComodule w (IdentityT w) where lcoact = comonadTransLCoscale
+instance (Comonad w) => LeftComodule w (EnvT e w) where lcoact = comonadTransLCoscale
+instance (Comonad w) => LeftComodule w (StoreT s w) where lcoact = comonadTransLCoscale
+instance (Comonad w, Monoid m) => LeftComodule w (TracedT m w) where lcoact = comonadTransLCoscale
 
-instance (Comonad m) => RightComodule m (IdentityT m) where rcoact = fmap lower . duplicate
-instance (Comonad m) => RightComodule m (EnvT e m) where rcoact = fmap lower . duplicate
-instance (Comonad m) => RightComodule m (StoreT s m) where rcoact = fmap lower . duplicate
-instance (Comonad w, Monoid m) => RightComodule w (TracedT m w) where rcoact = fmap lower . duplicate
+comonadTransRCoscale :: (Comonad w, ComonadTrans t, Comonad (t w)) => t w a -> t w (w a)
+comonadTransRCoscale = fmap lower . duplicate
 
-instance (Comonad m) => BiComodule m m (IdentityT m)
-instance (Comonad m) => BiComodule m m (EnvT e m)
-instance (Comonad m) => BiComodule m m (StoreT s m)
-instance (Comonad w, Monoid m) => BiComodule w w (TracedT m w)
+instance (Comonad m) => RightComodule m (IdentityT m) where rcoact = comonadTransRCoscale
+instance (Comonad m) => RightComodule m (EnvT e m) where rcoact = comonadTransRCoscale
+instance (Comonad m) => RightComodule m (StoreT s m) where rcoact = comonadTransRCoscale
+instance (Comonad w, Monoid m) => RightComodule w (TracedT m w) where rcoact = comonadTransRCoscale
+
+comonadTransBiCoscale :: (Comonad w, ComonadTrans t, Comonad (t w)) => t w a -> w (t w (w a))
+comonadTransBiCoscale = fmap (fmap lower) . lower . duplicate . duplicate
+
+instance (Comonad m) => BiComodule m m (IdentityT m) where bicoact = comonadTransBiCoscale
+instance (Comonad m) => BiComodule m m (EnvT e m) where bicoact = comonadTransBiCoscale
+instance (Comonad m) => BiComodule m m (StoreT s m) where bicoact = comonadTransBiCoscale
+instance (Comonad w, Monoid m) => BiComodule w w (TracedT m w) where bicoact = comonadTransBiCoscale
