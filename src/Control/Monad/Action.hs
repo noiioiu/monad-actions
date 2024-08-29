@@ -94,7 +94,9 @@ instance (Monad m, Functor f, RightModule m n) => RightModule m (Compose f n) wh
 
 instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiModule s t (Compose u (Compose f v))
 
--- | @'MonadTrans'@ instances are required to satisfy these laws:
+-- | Default left scalar multiplication for monad transformers.
+--
+--   @'MonadTrans'@ instances are required to satisfy these laws:
 --
 --   * @'lift' '.' 'pure' = 'pure'@
 --
@@ -170,7 +172,9 @@ instance (Monad m) => LeftModule m (ContT r m) where lact = monadTransLScale
 instance (Monad m, Monoid w) => LeftModule m (L.RWST r w s m) where lact = monadTransLScale
 instance (Monad m, Monoid w) => LeftModule m (S.RWST r w s m) where lact = monadTransLScale
 
--- | We prove the right module laws using string diagrams, just as in the case
+-- | Default right scalar multiplication for monad transformers.
+--
+--   We prove the right module laws using string diagrams, just as in the case
 --   of the left module laws.
 --
 --   The diagram for @'ract'@ is:
@@ -230,7 +234,9 @@ instance (Monad m) => RightModule m (ContT r m) where ract = monadTransRScale
 instance (Monad m, Monoid w) => RightModule m (L.RWST r w s m) where ract = monadTransRScale
 instance (Monad m, Monoid w) => RightModule m (S.RWST r w s m) where ract = monadTransRScale
 
--- | We prove the bimodule law using string diagrams, just as in the case
+-- | Default two-sided scalar multiplication for monad transformers.
+--
+--   We prove the bimodule law using string diagrams, just as in the case
 --   of the left and right module laws:
 --
 --   > ┈┈►─┐

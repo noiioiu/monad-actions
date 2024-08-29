@@ -68,7 +68,9 @@ instance (Comonad w, Functor f, RightComodule w v) => RightComodule w (Compose f
 
 instance (Comonad s, Comonad t, Functor f, LeftComodule s u, RightComodule t v) => BiComodule s t (Compose u (Compose f v))
 
--- | No laws are given in the dicumentation for @'ComonadTrans'@, but we suppose they satisfy the following laws,
+-- | Default left scalar comultiplication for comonad transformers.
+--
+--   No laws are given in the dicumentation for @'ComonadTrans'@, but we suppose they satisfy the following laws,
 --   dual to the laws for @'MonadTrans'@:
 --
 --   * @'extract' '.' 'lower' = 'extract'@
@@ -85,6 +87,7 @@ instance (Comonad w) => LeftComodule w (EnvT e w) where lcoact = comonadTransLCo
 instance (Comonad w) => LeftComodule w (StoreT s w) where lcoact = comonadTransLCoscale
 instance (Comonad w, Monoid m) => LeftComodule w (TracedT m w) where lcoact = comonadTransLCoscale
 
+-- | Default right scalar comultiplication for comonad transformers.
 comonadTransRCoscale :: (Comonad w, ComonadTrans t, Comonad (t w)) => t w a -> t w (w a)
 comonadTransRCoscale = fmap lower . duplicate
 
@@ -93,6 +96,7 @@ instance (Comonad m) => RightComodule m (EnvT e m) where rcoact = comonadTransRC
 instance (Comonad m) => RightComodule m (StoreT s m) where rcoact = comonadTransRCoscale
 instance (Comonad w, Monoid m) => RightComodule w (TracedT m w) where rcoact = comonadTransRCoscale
 
+-- | Default two-sided scalar comultiplication for comonad transformers.
 comonadTransBiCoscale :: (Comonad w, ComonadTrans t, Comonad (t w)) => t w a -> w (t w (w a))
 comonadTransBiCoscale = fmap (fmap lower) . lower . duplicate . duplicate
 
