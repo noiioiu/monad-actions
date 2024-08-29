@@ -15,6 +15,7 @@ import Control.Monad.Writer
 import Data.Functor.Compose
 import Test.QuickCheck
 import Test.QuickCheck.Checkers
+import Control.Monad.Identity
 
 leftmodule ::
   forall m f a.
@@ -228,7 +229,8 @@ main =
       bimodule @Maybe @Maybe @[] @Int,
       bimodule @Maybe @[] @[] @Int,
       bimodule @[] @Maybe @[] @Int,
-      bimodule @[] @[] @[] @Int
+      bimodule @[] @[] @[] @Int,
+      leftmodule @Identity @Identity @Int
       -- rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char,
       -- rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char,
       -- rightmodulereader @(Either Bool) @Char @Int,

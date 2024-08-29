@@ -31,6 +31,7 @@ import Control.Monad.Trans.Accum
 import Control.Monad.Trans.Cont
 import Control.Monad.RWS.Lazy qualified as L
 import Control.Monad.RWS.Strict qualified as S
+import Control.Monad.Identity
 
 -- | Instances must satisfy the following laws:
 --
@@ -65,14 +66,22 @@ class (LeftModule r f, RightModule s f) => BiModule r s f where
     f a
   biact = ract . lact
 
-instance (Monad m) => RightModule m m where
-  ract = join
-
 instance (Monad m) => LeftModule m m where
   lact = join
 
+instance (Monad m) => RightModule m m where
+  ract = join
+
 instance (Monad m) => BiModule m m m where
   biact = join . join
+
+instance (Functor f) => LeftModule Identity f where
+  lact = runIdentity
+
+instance (Functor f) => RightModule Identity f where
+  ract = fmap runIdentity
+
+instance (Functor f) => BiModule Identity Identity f
 
 instance RightModule Maybe [] where
   ract = catMaybes
