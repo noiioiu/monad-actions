@@ -247,15 +247,17 @@ instance (Monad m, Monoid w) => RightModule m (S.RWST r w s m) where ract = mona
 --   We prove the bimodule law using string diagrams, just as in the case
 --   of the left and right module laws:
 --
---   > ┈┈►─┐
---   >     ├───┐          ┈┈┈┈┈┈►─┐
---   > ────┘   ├────  =   ────┐   ├────
---   > ┈┈┈┈┈┈►─┘              ├───┘
---   >                    ┈┈►─┘
+--   > ┈┈┈►─┐             ┈┈►─┐
+--   >      ├───┐             ├───┐          ┈┈┈┈┈┈►─┐
+--   > ─────┘   ├────  =  ────┘   ├────  =   ────┐   ├────
+--   > ┈►───────┘         ┈┈┈┈┈┈►─┘              ├───┘
+--   >                                       ┈┈►─┘
 --
 --   In other words,
 --
 --   @  'biact'
+--   = 'join' '.' 'join' '.' 'lift' '.' 'fmap' ('fmap' 'lift')
+--   = 'join' '.' 'fmap' 'lift' '.' 'join' '.' 'lift'
 --   = 'ract' '.' 'lact'
 --   = 'join' '.' 'fmap' 'lift' '.' 'join' '.' 'lift'
 --   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'lift') '.' 'lift'
