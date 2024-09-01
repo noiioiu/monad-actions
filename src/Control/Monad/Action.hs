@@ -3,8 +3,7 @@
 {-# LANGUAGE IncoherentInstances #-}
 
 module Control.Monad.Action
-  ( module Control.Monad,
-    LeftModule (..),
+  ( LeftModule (..),
     RightModule (..),
     BiModule (..),
     monadTransLScale,

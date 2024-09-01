@@ -60,6 +60,8 @@ library
 
     -- Modules exported by the library.
     exposed-modules:  Control.Monad.Action,
+                      Control.Monad.Action.Left,
+                      Control.Monad.Action.Right,
                       Control.Comonad.Coaction
 
     -- Modules included in this library but not exported.
