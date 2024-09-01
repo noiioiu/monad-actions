@@ -1,7 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE IncoherentInstances #-}
+{-# LANGUAGE QualifiedDo #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE IncoherentInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
@@ -9,13 +10,16 @@
 module Main (main) where
 
 import Control.Monad.Action
+import Control.Monad.Identity
 import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Writer
 import Data.Functor.Compose
 import Test.QuickCheck
 import Test.QuickCheck.Checkers
-import Control.Monad.Identity
+import Control.Monad.Action.Left qualified as L
+import Control.Monad.Action.Right qualified as R
+import Control.Applicative
 
 leftmodule ::
   forall m f a.
@@ -214,31 +218,44 @@ instance (Arbitrary (m (a, w))) => Arbitrary (WriterT w m a) where
 instance (EqProp (m (a, w))) => EqProp (WriterT w m a) where
   a =-= b = runWriterT a =-= runWriterT b
 
+ldotest :: StateT Char [] Int
+ldotest = L.do x <- [1,2,3,4,5]
+               g <- get @_ @(StateT Char [])
+               put @_ @(StateT Char []) $ succ g
+               pure $ x*x
+
+rdotest :: Compose ZipList [] Int
+rdotest = R.do x <- Compose $ ZipList [[1,2,3], [4,5,6], [7,8,9]]
+               [x*x, x]
+
 main :: IO ()
 main =
+  print (getCompose rdotest) >>
+  print (runStateT ldotest 'a') >>
   mapM_
     quickBatch
-    [ leftmodule @Maybe @[] @Int,
-      rightmodule @Maybe @[] @Int,
-      bimodule @Maybe @Maybe @[] @Int,
-      leftmodule @[] @(Compose [] ((,) Bool)) @Bool,
-      rightmodule @Maybe @(Compose ((,) Bool) []) @Bool,
-      bimodule @Maybe @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool,
-      leftmodule @Maybe @[] @Int,
-      rightmodule @Maybe @[] @Int,
-      bimodule @Maybe @Maybe @[] @Int,
-      bimodule @Maybe @[] @[] @Int,
-      bimodule @[] @Maybe @[] @Int,
-      bimodule @[] @[] @[] @Int,
-      leftmodule @Identity @Identity @Int
-      -- rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char,
-      -- rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char,
-      -- rightmodulereader @(Either Bool) @Char @Int,
+    [ leftmodule @Maybe @[] @Int
+    , rightmodule @Maybe @[] @Int
+      --, bimodule @Maybe @Maybe @[] @Int
+      --, leftmodule @[] @(Compose [] ((,) Bool)) @Bool
+      --, rightmodule @Maybe @(Compose ((,) Bool) []) @Bool
+      --, bimodule @Maybe @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool
+      --, leftmodule @Maybe @[] @Int
+      --, rightmodule @Maybe @[] @Int
+      --, bimodule @Maybe @Maybe @[] @Int
+      --, bimodule @Maybe @[] @[] @Int
+      --, bimodule @[] @Maybe @[] @Int
+      --, bimodule @[] @[] @[] @Int
+      --, leftmodule @Identity @Identity @Int
 
-      -- leftmodulestate @(Writer (Sum Int)) @Int @Bool,
-      -- rightmodulestate @(Writer (Sum Int)) @Int @Bool,
-      -- rightmodulestate @(Either Bool) @Int @Bool,
-      -- bimodulestate @(WriterT (Sum Int) Maybe) @Int @Bool
+      --, rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char
+      --, rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char
+      --, rightmodulereader @(Either Bool) @Char @Int
+
+      -- , leftmodulestate @(Writer (Sum Int)) @Int @Bool
+      -- , rightmodulestate @(Writer (Sum Int)) @Int @Bool
+      -- , rightmodulestate @(Either Bool) @Int @Bool
+      -- , bimodulestate @(WriterT (Sum Int) Maybe) @Int @Bool
       -- , rightmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
       -- , leftmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
     ]
