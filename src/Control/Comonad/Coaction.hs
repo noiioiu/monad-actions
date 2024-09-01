@@ -1,7 +1,6 @@
 -- | A comonad coaction is a comonoid coaction in the category of endofunctors, what's the problem?
 module Control.Comonad.Coaction
-  ( module Control.Comonad,
-    LeftComodule (..),
+  ( LeftComodule (..),
     RightComodule (..),
     BiComodule (..),
     comonadTransLCoscale,
