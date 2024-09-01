@@ -17,6 +17,7 @@ import Control.Comonad.Trans.Identity
 import Control.Comonad.Trans.Store
 import Control.Comonad.Trans.Traced
 import Data.Functor.Compose
+import Control.Comonad.Identity
 
 -- | Instances must satisfy the following laws:
 --
@@ -59,6 +60,15 @@ instance (Comonad w) => RightComodule w w where
 
 instance (Comonad w) => BiComodule w w w where
   bicoact = duplicate . duplicate
+
+instance (Comonad w) => LeftComodule Identity w where
+  lcoact = Identity
+
+instance (Comonad w) => RightComodule Identity w where
+  rcoact = fmap Identity
+
+instance (Comonad w) => BiComodule Identity Identity w where
+  bicoact = Identity . fmap Identity
 
 instance (Comonad w, Functor f, LeftComodule w v) => LeftComodule w (Compose v f) where
   lcoact = fmap Compose . lcoact . getCompose
