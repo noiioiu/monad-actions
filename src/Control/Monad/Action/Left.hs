@@ -1,14 +1,9 @@
 {-# LANGUAGE RebindableSyntax #-}
 
-module Control.Monad.Action.Left (return, (>>=), (>>)) where
+module Control.Monad.Action.Left ((>>=), (>>)) where
 
 import Control.Monad.Action
-import Data.Pointed
-import Prelude hiding (return, (>>), (>>=))
-
--- Pointed should be a superclass of Applicative
-return :: (Pointed f) => a -> f a
-return = point
+import Prelude hiding ((>>), (>>=))
 
 (>>=) :: (LeftModule m f) => m a -> (a -> f b) -> f b
 (>>=) = (lact .) . flip fmap
