@@ -3,10 +3,11 @@
 module Control.Monad.Action.Right (return, (>>=), (>>)) where
 
 import Control.Monad.Action
+import Data.Pointed
 import Prelude hiding (return, (>>), (>>=))
 
-return :: (Applicative f) => a -> f a
-return = pure
+return :: (Pointed f) => a -> f a
+return = point
 
 (>>=) :: (RightModule m f) => f a -> (a -> m b) -> f b
 (>>=) = (ract .) . flip fmap
