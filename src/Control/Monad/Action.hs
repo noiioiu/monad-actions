@@ -1,7 +1,6 @@
--- | A monad action is a monoid action in the category of endofunctors, what's the problem?
-
 {-# LANGUAGE IncoherentInstances #-}
 
+-- | A monad action is a monoid action in the category of endofunctors, what's the problem?
 module Control.Monad.Action
   ( LeftModule (..),
     RightModule (..),
@@ -13,9 +12,13 @@ module Control.Monad.Action
 where
 
 import Control.Monad
+import Control.Monad.Identity
+import Control.Monad.RWS.Lazy qualified as L
+import Control.Monad.RWS.Strict qualified as S
 import Control.Monad.Trans
+import Control.Monad.Trans.Accum
+import Control.Monad.Trans.Cont
 import Control.Monad.Trans.Except
-import Control.Monad.Trans.Identity
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.Select
@@ -26,11 +29,6 @@ import Control.Monad.Trans.Writer.Lazy qualified as L
 import Control.Monad.Trans.Writer.Strict qualified as S
 import Data.Functor.Compose
 import Data.Maybe (catMaybes)
-import Control.Monad.Trans.Accum
-import Control.Monad.Trans.Cont
-import Control.Monad.RWS.Lazy qualified as L
-import Control.Monad.RWS.Strict qualified as S
-import Control.Monad.Identity
 
 -- | Instances must satisfy the following laws:
 --
@@ -65,34 +63,39 @@ class (LeftModule r f, RightModule s f) => BiModule r s f where
     f a
   biact = ract . lact
 
-instance (Monad m) => LeftModule m m where
-  lact = join
+instance (Monad m) => LeftModule m m where lact = join
 
-instance (Monad m) => RightModule m m where
-  ract = join
+instance (Monad m) => RightModule m m where ract = join
 
-instance (Monad m) => BiModule m m m where
-  biact = join . join
+instance (Monad m) => BiModule m m m
 
-instance (Functor f) => LeftModule Identity f where
-  lact = runIdentity
+instance (Functor f) => LeftModule Identity f where lact = runIdentity
 
-instance (Functor f) => RightModule Identity f where
-  ract = fmap runIdentity
+instance (Functor f) => RightModule Identity f where ract = fmap runIdentity
 
 instance (Functor f) => BiModule Identity Identity f
 
-instance RightModule Maybe [] where
-  ract = catMaybes
+instance RightModule Maybe [] where ract = catMaybes
 
-instance LeftModule Maybe [] where
-  lact = concat
+instance LeftModule Maybe [] where lact = concat
 
 instance BiModule Maybe Maybe []
 
 instance BiModule Maybe [] []
 
 instance BiModule [] Maybe []
+
+instance RightModule (Either e) Maybe where
+  ract (Just (Right x)) = Just x
+  ract _ = Nothing
+
+instance LeftModule (Either e) Maybe where
+  lact (Right (Just x)) = Just x
+  lact _ = Nothing
+
+instance BiModule (Either e) (Either f) Maybe
+instance BiModule (Either e) Maybe Maybe
+instance BiModule Maybe (Either f) Maybe
 
 instance (Monad m, Functor f, LeftModule m n) => LeftModule m (Compose n f) where
   lact = Compose . lact . fmap getCompose
@@ -104,7 +107,7 @@ instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiMod
 
 -- | Default left scalar multiplication for monad transformers.
 --
---   @'MonadTrans'@ instances are required to satisfy these laws:
+--   @'MonadTrans'@ instances are required to satisfy these laws, which state that @'lift'@ is a monad homomorphism:
 --
 --   * @'lift' '.' 'pure' = 'pure'@
 --
@@ -166,18 +169,31 @@ monadTransLScale :: (Monad m, MonadTrans t, Monad (t m)) => m (t m a) -> t m a
 monadTransLScale = join . lift
 
 instance (Monad m) => LeftModule m (MaybeT m) where lact = monadTransLScale
+
 instance (Monad m) => LeftModule m (ExceptT e m) where lact = monadTransLScale
+
 instance (Monad m) => LeftModule m (IdentityT m) where lact = monadTransLScale
+
 instance (Monad m) => LeftModule m (ReaderT r m) where lact = monadTransLScale
+
 instance (Monad m) => LeftModule m (SelectT r m) where lact = monadTransLScale
+
 instance (Monad m) => LeftModule m (L.StateT r m) where lact = monadTransLScale
+
 instance (Monad m) => LeftModule m (S.StateT r m) where lact = monadTransLScale
+
 instance (Monad m) => LeftModule m (C.WriterT w m) where lact = monadTransLScale
+
 instance (Monad m, Monoid w) => LeftModule m (S.WriterT w m) where lact = monadTransLScale
+
 instance (Monad m, Monoid w) => LeftModule m (L.WriterT w m) where lact = monadTransLScale
+
 instance (Monad m, Monoid w) => LeftModule m (AccumT w m) where lact = monadTransLScale
+
 instance (Monad m) => LeftModule m (ContT r m) where lact = monadTransLScale
+
 instance (Monad m, Monoid w) => LeftModule m (L.RWST r w s m) where lact = monadTransLScale
+
 instance (Monad m, Monoid w) => LeftModule m (S.RWST r w s m) where lact = monadTransLScale
 
 -- | Default right scalar multiplication for monad transformers.
@@ -228,18 +244,31 @@ monadTransRScale :: (Monad m, MonadTrans t, Monad (t m)) => t m (m a) -> t m a
 monadTransRScale = (lift =<<)
 
 instance (Monad m) => RightModule m (MaybeT m) where ract = monadTransRScale
+
 instance (Monad m) => RightModule m (ExceptT e m) where ract = monadTransRScale
+
 instance (Monad m) => RightModule m (IdentityT m) where ract = monadTransRScale
+
 instance (Monad m) => RightModule m (ReaderT r m) where ract = monadTransRScale
+
 instance (Monad m) => RightModule m (SelectT r m) where ract = monadTransRScale
+
 instance (Monad m) => RightModule m (L.StateT r m) where ract = monadTransRScale
+
 instance (Monad m) => RightModule m (S.StateT r m) where ract = monadTransRScale
+
 instance (Monad m) => RightModule m (C.WriterT w m) where ract = monadTransRScale
+
 instance (Monad m, Monoid w) => RightModule m (S.WriterT w m) where ract = monadTransRScale
+
 instance (Monad m, Monoid w) => RightModule m (L.WriterT w m) where ract = monadTransRScale
+
 instance (Monad m, Monoid w) => RightModule m (AccumT w m) where ract = monadTransRScale
+
 instance (Monad m) => RightModule m (ContT r m) where ract = monadTransRScale
+
 instance (Monad m, Monoid w) => RightModule m (L.RWST r w s m) where ract = monadTransRScale
+
 instance (Monad m, Monoid w) => RightModule m (S.RWST r w s m) where ract = monadTransRScale
 
 -- | Default two-sided scalar multiplication for monad transformers.
@@ -269,16 +298,29 @@ monadTransBiScale :: (Monad m, MonadTrans t, Monad (t m)) => m (t m (m a)) -> t 
 monadTransBiScale = join . join . lift . fmap (fmap lift)
 
 instance (Monad m) => BiModule m m (MaybeT m) where biact = monadTransBiScale
+
 instance (Monad m) => BiModule m m (ExceptT e m) where biact = monadTransBiScale
+
 instance (Monad m) => BiModule m m (IdentityT m) where biact = monadTransBiScale
+
 instance (Monad m) => BiModule m m (ReaderT r m) where biact = monadTransBiScale
+
 instance (Monad m) => BiModule m m (SelectT r m) where biact = monadTransBiScale
+
 instance (Monad m) => BiModule m m (L.StateT r m) where biact = monadTransBiScale
+
 instance (Monad m) => BiModule m m (S.StateT r m) where biact = monadTransBiScale
+
 instance (Monad m) => BiModule m m (C.WriterT w m) where biact = monadTransBiScale
+
 instance (Monad m, Monoid w) => BiModule m m (S.WriterT w m) where biact = monadTransBiScale
+
 instance (Monad m, Monoid w) => BiModule m m (L.WriterT w m) where biact = monadTransBiScale
+
 instance (Monad m, Monoid w) => BiModule m m (AccumT w m) where biact = monadTransBiScale
+
 instance (Monad m) => BiModule m m (ContT r m) where biact = monadTransBiScale
+
 instance (Monad m, Monoid w) => BiModule m m (L.RWST r w s m) where biact = monadTransBiScale
+
 instance (Monad m, Monoid w) => BiModule m m (S.RWST r w s m) where biact = monadTransBiScale
