@@ -236,6 +236,12 @@ main =
     quickBatch
     [ leftmodule @Maybe @[] @Int
     , rightmodule @Maybe @[] @Int
+    , rightmodule @(Either Int) @Maybe @Int
+    , leftmodule @(Either Char) @Maybe @Int
+    , bimodule @(Either Char) @(Either Bool) @Maybe @Int
+    , bimodule @(Either Char) @(Either Int) @Maybe @Int
+    , bimodule @Maybe @(Either Int) @Maybe @Int
+    , bimodule @(Either Char) @Maybe @Maybe @Int
       --, bimodule @Maybe @Maybe @[] @Int
       --, leftmodule @[] @(Compose [] ((,) Bool)) @Bool
       --, rightmodule @Maybe @(Compose ((,) Bool) []) @Bool
@@ -248,7 +254,7 @@ main =
       --, bimodule @[] @[] @[] @Int
       --, leftmodule @Identity @Identity @Int
 
-      --, rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char
+      , rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char
       --, rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char
       --, rightmodulereader @(Either Bool) @Char @Int
 
