@@ -1,4 +1,4 @@
-module Control.Monad.Action.Right ((>>=), (>>)) where
+module Control.Monad.Action.Right ((>>=), (>>), pure, return, fail) where
 
 import Control.Monad.Action
 import Prelude hiding ((>>), (>>=))
