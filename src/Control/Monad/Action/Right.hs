@@ -1,5 +1,3 @@
-{-# LANGUAGE RebindableSyntax #-}
-
 module Control.Monad.Action.Right ((>>=), (>>)) where
 
 import Control.Monad.Action
