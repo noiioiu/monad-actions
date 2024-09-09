@@ -1,5 +1,3 @@
-{-# LANGUAGE IncoherentInstances #-}
-
 -- | A monad action is a monoid action in the category of endofunctors, what's the problem?
 module Control.Monad.Action
   ( LeftModule (..),
@@ -94,7 +92,9 @@ instance LeftModule (Either e) Maybe where
   lact _ = Nothing
 
 instance BiModule (Either e) (Either f) Maybe
+
 instance BiModule (Either e) Maybe Maybe
+
 instance BiModule Maybe (Either f) Maybe
 
 instance (Monad m, Functor f, LeftModule m n) => LeftModule m (Compose n f) where
