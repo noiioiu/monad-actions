@@ -62,7 +62,6 @@ library
     exposed-modules:  Control.Monad.Action,
                       Control.Monad.Action.Left,
                       Control.Monad.Action.Right,
-                      Control.Comonad.Coaction
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -72,9 +71,8 @@ library
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.17.2.1,
-                      comonad,
-                      mtl,
-                      transformers
+                      mtl >=2.2.2,
+                      transformers >=0.5.6.2,
 
     -- Directories containing source files.
     hs-source-dirs:   src
