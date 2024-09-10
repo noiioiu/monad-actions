@@ -9,17 +9,17 @@ module Control.Monad.Action
   )
 where
 
-import Control.Monad
-import Control.Monad.Identity
+import Control.Monad (join)
+import Control.Monad.Identity (Identity (..), IdentityT)
 import Control.Monad.RWS.Lazy qualified as L
 import Control.Monad.RWS.Strict qualified as S
-import Control.Monad.Trans
-import Control.Monad.Trans.Accum
-import Control.Monad.Trans.Cont
-import Control.Monad.Trans.Except
-import Control.Monad.Trans.Maybe
-import Control.Monad.Trans.Reader
-import Control.Monad.Trans.Select
+import Control.Monad.Trans (MonadTrans (..))
+import Control.Monad.Trans.Accum (AccumT)
+import Control.Monad.Trans.Cont (ContT)
+import Control.Monad.Trans.Except (ExceptT)
+import Control.Monad.Trans.Maybe (MaybeT)
+import Control.Monad.Trans.Reader (ReaderT)
+import Control.Monad.Trans.Select (SelectT)
 import Control.Monad.Trans.State.Lazy qualified as L
 import Control.Monad.Trans.State.Strict qualified as S
 import Control.Monad.Trans.Writer.CPS qualified as C

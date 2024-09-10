@@ -9,14 +9,14 @@ module Control.Comonad.Coaction
   )
 where
 
-import Control.Comonad
-import Control.Comonad.Trans.Class
-import Control.Comonad.Trans.Env
-import Control.Comonad.Trans.Identity
-import Control.Comonad.Trans.Store
-import Control.Comonad.Trans.Traced
-import Data.Functor.Compose
-import Control.Comonad.Identity
+import Control.Comonad (Comonad (..))
+import Control.Comonad.Identity (Identity (..))
+import Control.Comonad.Trans.Class (ComonadTrans (..))
+import Control.Comonad.Trans.Env (EnvT)
+import Control.Comonad.Trans.Identity (IdentityT (..))
+import Control.Comonad.Trans.Store (StoreT)
+import Control.Comonad.Trans.Traced (TracedT)
+import Data.Functor.Compose (Compose (..))
 
 -- | Instances must satisfy the following laws:
 --
@@ -92,8 +92,11 @@ comonadTransLCoscale :: (Comonad w, ComonadTrans t, Comonad (t w)) => t w a -> w
 comonadTransLCoscale = lower . duplicate
 
 instance (Comonad w) => LeftComodule w (IdentityT w) where lcoact = comonadTransLCoscale
+
 instance (Comonad w) => LeftComodule w (EnvT e w) where lcoact = comonadTransLCoscale
+
 instance (Comonad w) => LeftComodule w (StoreT s w) where lcoact = comonadTransLCoscale
+
 instance (Comonad w, Monoid m) => LeftComodule w (TracedT m w) where lcoact = comonadTransLCoscale
 
 -- | Default right scalar comultiplication for comonad transformers.
@@ -101,8 +104,11 @@ comonadTransRCoscale :: (Comonad w, ComonadTrans t, Comonad (t w)) => t w a -> t
 comonadTransRCoscale = fmap lower . duplicate
 
 instance (Comonad m) => RightComodule m (IdentityT m) where rcoact = comonadTransRCoscale
+
 instance (Comonad m) => RightComodule m (EnvT e m) where rcoact = comonadTransRCoscale
+
 instance (Comonad m) => RightComodule m (StoreT s m) where rcoact = comonadTransRCoscale
+
 instance (Comonad w, Monoid m) => RightComodule w (TracedT m w) where rcoact = comonadTransRCoscale
 
 -- | Default two-sided scalar comultiplication for comonad transformers.
@@ -110,6 +116,9 @@ comonadTransBiCoscale :: (Comonad w, ComonadTrans t, Comonad (t w)) => t w a -> 
 comonadTransBiCoscale = fmap (fmap lower) . lower . duplicate . duplicate
 
 instance (Comonad m) => BiComodule m m (IdentityT m) where bicoact = comonadTransBiCoscale
+
 instance (Comonad m) => BiComodule m m (EnvT e m) where bicoact = comonadTransBiCoscale
+
 instance (Comonad m) => BiComodule m m (StoreT s m) where bicoact = comonadTransBiCoscale
+
 instance (Comonad w, Monoid m) => BiComodule w w (TracedT m w) where bicoact = comonadTransBiCoscale
