@@ -25,7 +25,7 @@ import Control.Monad.Trans.State.Strict qualified as S
 import Control.Monad.Trans.Writer.CPS qualified as C
 import Control.Monad.Trans.Writer.Lazy qualified as L
 import Control.Monad.Trans.Writer.Strict qualified as S
-import Data.Functor.Compose
+import Data.Functor.Compose (Compose (..))
 import Data.Maybe (catMaybes)
 
 -- | Instances must satisfy the following laws:
