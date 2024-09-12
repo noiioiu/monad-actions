@@ -1,3 +1,5 @@
+{-# LANGUAGE IncoherentInstances #-}
+
 -- | A monad action is a monoid action in the category of endofunctors, what's the problem?
 module Control.Monad.Action
   ( LeftModule (..),
@@ -16,8 +18,8 @@ import Control.Monad.RWS.Strict qualified as S
 import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Accum (AccumT)
 import Control.Monad.Trans.Cont (ContT)
-import Control.Monad.Trans.Except (ExceptT)
-import Control.Monad.Trans.Maybe (MaybeT)
+import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
+import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.Monad.Trans.Select (SelectT)
 import Control.Monad.Trans.State.Lazy qualified as L
@@ -324,3 +326,45 @@ instance (Monad m) => BiModule m m (ContT r m) where biact = monadTransBiScale
 instance (Monad m, Monoid w) => BiModule m m (L.RWST r w s m) where biact = monadTransBiScale
 
 instance (Monad m, Monoid w) => BiModule m m (S.RWST r w s m) where biact = monadTransBiScale
+
+-------------------------------------------------------
+
+instance (Monad m) => LeftModule Maybe (MaybeT m) where
+  lact = join . MaybeT . pure
+
+instance (Monad m) => RightModule Maybe (MaybeT m) where
+  ract = MaybeT . fmap join . runMaybeT
+
+instance (Monad m) => LeftModule (Either e) (MaybeT m) where
+  lact = join . MaybeT . fmap (either (const Nothing) Just) . pure @m
+
+instance (Monad m) => RightModule (Either e) (MaybeT m) where
+  ract = MaybeT . fmap (either (const Nothing) Just =<<) . runMaybeT
+
+instance (Monoid e, Monad m) => LeftModule Maybe (ExceptT e m) where
+  lact = join . ExceptT . pure . maybe (Left mempty) Right
+
+instance (Monoid e, Monad m) => RightModule Maybe (ExceptT e m) where
+  ract = ExceptT . fmap (maybe (Left mempty) Right =<<) . runExceptT
+
+instance (Monad m) => LeftModule (Either e) (ExceptT e m) where
+  lact = join . ExceptT . pure
+
+instance (Monoid e, Monad m) => RightModule (Either e) (ExceptT e m) where
+  ract = ExceptT . fmap join . runExceptT
+
+instance (Monad m) => BiModule Maybe Maybe (MaybeT m)
+
+instance (Monad m) => BiModule (Either e) Maybe (MaybeT m)
+
+instance (Monad m) => BiModule Maybe (Either e) (MaybeT m)
+
+instance (Monad m) => BiModule (Either e) (Either f) (MaybeT m)
+
+instance (Monoid e, Monad m) => BiModule Maybe Maybe (ExceptT e m)
+
+instance (Monoid e, Monad m) => BiModule (Either e) Maybe (ExceptT e m)
+
+instance (Monoid e, Monad m) => BiModule Maybe (Either e) (ExceptT e m)
+
+instance (Monoid e, Monad m) => BiModule (Either e) (Either e) (ExceptT e m)
