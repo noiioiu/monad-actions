@@ -14,12 +14,14 @@ import Control.Monad.Identity
 import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Writer
+import Control.Monad.Trans.Maybe
 import Data.Functor.Compose
 import Test.QuickCheck
 import Test.QuickCheck.Checkers
 import Control.Monad.Action.Left qualified as L
 import Control.Monad.Action.Right qualified as R
 import Control.Applicative
+import Control.Monad.Except
 
 leftmodule ::
   forall m f a.
@@ -95,6 +97,20 @@ instance (CoArbitrary s, Arbitrary (m (a, s)), Function s) => Arbitrary (StateT 
 
 instance (Show s, Arbitrary s, EqProp (m (a, s))) => EqProp (StateT s m a) where
   a =-= b = runStateT a =-= runStateT b
+
+instance (Arbitrary (m (Maybe a))) => Arbitrary (MaybeT m a) where
+  arbitrary = MaybeT <$> arbitrary
+
+instance (EqProp (m (Maybe a))) => EqProp (MaybeT m a) where
+  MaybeT x =-= MaybeT y = x =-= y
+
+instance (Arbitrary (m (Either e a))) => Arbitrary (ExceptT e m a) where
+  arbitrary = ExceptT <$> arbitrary
+
+instance (EqProp (m (Either e a))) => EqProp (ExceptT e m a) where
+  ExceptT x =-= ExceptT y = x =-= y
+
+
 
 rightmodulestate ::
   forall m s a.
@@ -242,6 +258,23 @@ main =
     , bimodule @(Either Char) @(Either Int) @Maybe @Int
     , bimodule @Maybe @(Either Int) @Maybe @Int
     , bimodule @(Either Char) @Maybe @Maybe @Int
+
+    , rightmodule @(Either Int) @(MaybeT []) @Int
+    , leftmodule @(Either Int) @(MaybeT []) @Int
+    , bimodule @(Either Int) @(Either [Bool]) @(MaybeT []) @Int
+
+    , rightmodule @(Either (Sum Int)) @(ExceptT (Sum Int) []) @Int
+    , leftmodule @(Either (Sum Int)) @(ExceptT (Sum Int) []) @Int
+    , bimodule @(Either (Sum Int)) @(Either (Sum Int)) @(ExceptT (Sum Int) []) @Int
+
+    , rightmodule @Maybe @(ExceptT (Sum Int) []) @Int
+    , leftmodule @Maybe @(ExceptT (Sum Int) []) @Int
+    , bimodule @(Either (Sum Int)) @Maybe @(ExceptT (Sum Int) []) @Int
+
+    , rightmodule @Maybe @(MaybeT []) @Int
+    , leftmodule @Maybe @(MaybeT []) @Int
+    , bimodule @Maybe @Maybe @(MaybeT []) @Int
+
       --, bimodule @Maybe @Maybe @[] @Int
       --, leftmodule @[] @(Compose [] ((,) Bool)) @Bool
       --, rightmodule @Maybe @(Compose ((,) Bool) []) @Bool
