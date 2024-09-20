@@ -6,13 +6,13 @@ import Control.Monad.Action
 import Prelude hiding (return, (>>), (>>=))
 
 (>>=) :: (LeftModule m f) => m a -> (a -> f b) -> f b
-(>>=) = (lact .) . flip fmap
+(>>=) = (ljoin .) . flip fmap
 
 (>>) :: (LeftModule m f) => m a -> f b -> f b
-(>>) = (lact .) . flip (fmap . const)
+(>>) = (ljoin .) . flip (fmap . const)
 
 return :: (Applicative f) => a -> f a
 return = pure
 
 join :: (LeftModule m f) => m (f a) -> f a
-join = lact
+join = ljoin

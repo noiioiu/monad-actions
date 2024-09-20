@@ -32,22 +32,22 @@ import Data.Maybe (catMaybes)
 
 -- | Instances must satisfy the following laws:
 --
--- * @'lact' '.' 'join' = 'lact' '.' 'fmap' 'lact'@
+-- * @'ljoin' '.' 'join' = 'ljoin' '.' 'fmap' 'ljoin'@
 --
--- * @'lact' '.' 'pure' = 'id'@
+-- * @'ljoin' '.' 'pure' = 'id'@
 class (Monad m, Functor f) => LeftModule m f where
-  lact ::
+  ljoin ::
     m (f a) ->
     -- | left monad action
     f a
 
 -- | Instances must satisfy the following laws:
 --
--- * @'ract' '.' 'fmap' 'join' = 'ract' '.' 'ract'@
+-- * @'rjoin' '.' 'fmap' 'join' = 'rjoin' '.' 'rjoin'@
 --
--- * @'ract' '.' 'fmap' 'pure' = 'id'@
+-- * @'rjoin' '.' 'fmap' 'pure' = 'id'@
 class (Monad m, Functor f) => RightModule m f where
-  ract ::
+  rjoin ::
     f (m a) ->
     -- | right monad action
     f a
@@ -55,29 +55,29 @@ class (Monad m, Functor f) => RightModule m f where
 -- | Given two monads r and s, an (r, s) bimodule is a functor that is a left module over r and a right module over s, where the two actions are compatible.
 --   Instances must satisfy the following law in addition to the laws for @'LeftModule'@ and @'RightModule'@:
 --
--- * @'ract' '.' 'lact' = 'lact' '.' 'fmap' 'ract' = 'biact'@
+-- * @'rjoin' '.' 'ljoin' = 'ljoin' '.' 'fmap' 'rjoin' = 'bijoin'@
 class (LeftModule r f, RightModule s f) => BiModule r s f where
-  biact ::
+  bijoin ::
     r (f (s a)) ->
     -- | two-sided monad action
     f a
-  biact = ract . lact
+  bijoin = rjoin . ljoin
 
-instance (Monad m) => LeftModule m m where lact = join
+instance (Monad m) => LeftModule m m where ljoin = join
 
-instance (Monad m) => RightModule m m where ract = join
+instance (Monad m) => RightModule m m where rjoin = join
 
 instance (Monad m) => BiModule m m m
 
-instance (Functor f) => LeftModule Identity f where lact = runIdentity
+instance (Functor f) => LeftModule Identity f where ljoin = runIdentity
 
-instance (Functor f) => RightModule Identity f where ract = fmap runIdentity
+instance (Functor f) => RightModule Identity f where rjoin = fmap runIdentity
 
 instance (Functor f) => BiModule Identity Identity f
 
-instance RightModule Maybe [] where ract = catMaybes
+instance RightModule Maybe [] where rjoin = catMaybes
 
-instance LeftModule Maybe [] where lact = concat
+instance LeftModule Maybe [] where ljoin = concat
 
 instance BiModule Maybe Maybe []
 
@@ -86,12 +86,12 @@ instance BiModule Maybe [] []
 instance BiModule [] Maybe []
 
 instance RightModule (Either e) Maybe where
-  ract (Just (Right x)) = Just x
-  ract _ = Nothing
+  rjoin (Just (Right x)) = Just x
+  rjoin _ = Nothing
 
 instance LeftModule (Either e) Maybe where
-  lact (Right (Just x)) = Just x
-  lact _ = Nothing
+  ljoin (Right (Just x)) = Just x
+  ljoin _ = Nothing
 
 instance BiModule (Either e) (Either f) Maybe
 
@@ -100,10 +100,10 @@ instance BiModule (Either e) Maybe Maybe
 instance BiModule Maybe (Either f) Maybe
 
 instance (Monad m, Functor f, LeftModule m n) => LeftModule m (Compose n f) where
-  lact = Compose . lact . fmap getCompose
+  ljoin = Compose . ljoin . fmap getCompose
 
 instance (Monad m, Functor f, RightModule m n) => RightModule m (Compose f n) where
-  ract = Compose . fmap ract . getCompose
+  rjoin = Compose . fmap rjoin . getCompose
 
 instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiModule s t (Compose u (Compose f v))
 
@@ -131,7 +131,7 @@ instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiMod
 --   >    ├┈┈┈►───  =         ├───
 --   > ┈┈┈┘            ┈┈┈►───┘
 --
---   and the diagram for @'lact'@ is:
+--   and the diagram for @'ljoin'@ is:
 --
 --   > ┈┈►──┐
 --   >      ├───
@@ -145,7 +145,7 @@ instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiMod
 --
 --   In other words,
 --
---   @   'lact' '.' 'pure'
+--   @   'ljoin' '.' 'pure'
 --   = 'join' '.' 'lift' '.' 'pure'
 --   = 'join' '.' 'pure'
 --   = 'id'@
@@ -160,50 +160,50 @@ instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiMod
 --
 --   In other words,
 --
---   @  'lact' '.' 'join'
+--   @  'ljoin' '.' 'join'
 --   = 'join' '.' 'lift' '.' 'join'
 --   = 'join' '.' 'join' '.' 'fmap' 'lift' '.' 'lift'
 --   = 'join' '.' 'fmap' 'join' '.' 'fmap' 'lift' '.' 'lift'
 --   = 'join' '.' 'fmap' ('join' '.' 'lift') '.' 'lift'
 --   = 'join' '.' 'lift' '.' 'fmap' ('join' '.' 'lift')
---   = 'lact' '.' 'fmap' 'lact'@
+--   = 'ljoin' '.' 'fmap' 'ljoin'@
 monadTransLScale :: (Monad m, MonadTrans t, Monad (t m)) => m (t m a) -> t m a
 monadTransLScale = join . lift
 
-instance (Monad m) => LeftModule m (MaybeT m) where lact = monadTransLScale
+instance (Monad m) => LeftModule m (MaybeT m) where ljoin = monadTransLScale
 
-instance (Monad m) => LeftModule m (ExceptT e m) where lact = monadTransLScale
+instance (Monad m) => LeftModule m (ExceptT e m) where ljoin = monadTransLScale
 
-instance (Monad m) => LeftModule m (IdentityT m) where lact = monadTransLScale
+instance (Monad m) => LeftModule m (IdentityT m) where ljoin = monadTransLScale
 
-instance (Monad m) => LeftModule m (ReaderT r m) where lact = monadTransLScale
+instance (Monad m) => LeftModule m (ReaderT r m) where ljoin = monadTransLScale
 
-instance (Monad m) => LeftModule m (SelectT r m) where lact = monadTransLScale
+instance (Monad m) => LeftModule m (SelectT r m) where ljoin = monadTransLScale
 
-instance (Monad m) => LeftModule m (L.StateT r m) where lact = monadTransLScale
+instance (Monad m) => LeftModule m (L.StateT r m) where ljoin = monadTransLScale
 
-instance (Monad m) => LeftModule m (S.StateT r m) where lact = monadTransLScale
+instance (Monad m) => LeftModule m (S.StateT r m) where ljoin = monadTransLScale
 
-instance (Monad m) => LeftModule m (C.WriterT w m) where lact = monadTransLScale
+instance (Monad m) => LeftModule m (C.WriterT w m) where ljoin = monadTransLScale
 
-instance (Monad m, Monoid w) => LeftModule m (S.WriterT w m) where lact = monadTransLScale
+instance (Monad m, Monoid w) => LeftModule m (S.WriterT w m) where ljoin = monadTransLScale
 
-instance (Monad m, Monoid w) => LeftModule m (L.WriterT w m) where lact = monadTransLScale
+instance (Monad m, Monoid w) => LeftModule m (L.WriterT w m) where ljoin = monadTransLScale
 
-instance (Monad m, Monoid w) => LeftModule m (AccumT w m) where lact = monadTransLScale
+instance (Monad m, Monoid w) => LeftModule m (AccumT w m) where ljoin = monadTransLScale
 
-instance (Monad m) => LeftModule m (ContT r m) where lact = monadTransLScale
+instance (Monad m) => LeftModule m (ContT r m) where ljoin = monadTransLScale
 
-instance (Monad m, Monoid w) => LeftModule m (L.RWST r w s m) where lact = monadTransLScale
+instance (Monad m, Monoid w) => LeftModule m (L.RWST r w s m) where ljoin = monadTransLScale
 
-instance (Monad m, Monoid w) => LeftModule m (S.RWST r w s m) where lact = monadTransLScale
+instance (Monad m, Monoid w) => LeftModule m (S.RWST r w s m) where ljoin = monadTransLScale
 
 -- | Default right scalar multiplication for monad transformers.
 --
 --   We prove the right module laws using string diagrams, just as in the case
 --   of the left module laws.
 --
---   The diagram for @'ract'@ is:
+--   The diagram for @'rjoin'@ is:
 --
 --   > ─────┐
 --   >      ├───
@@ -217,7 +217,7 @@ instance (Monad m, Monoid w) => LeftModule m (S.RWST r w s m) where lact = monad
 --
 --   In other words,
 --
---   @   'ract' '.' 'fmap' 'pure'
+--   @   'rjoin' '.' 'fmap' 'pure'
 --   = 'join' '.' 'fmap' 'lift' , 'pure'
 --   = 'join' '.' 'fmap' 'lift' , 'fmap' 'pure'
 --   = 'join' '.' 'fmap' ('lift' , 'pure')
@@ -234,44 +234,44 @@ instance (Monad m, Monoid w) => LeftModule m (S.RWST r w s m) where lact = monad
 --
 --   In other words,
 --
---   @  'ract' '.' 'fmap' 'join'
+--   @  'rjoin' '.' 'fmap' 'join'
 --   = 'join' '.' 'fmap' 'lift' '.' 'fmap' 'join'
 --   = 'join' '.' 'fmap' ('lift' '.' 'join')
 --   = 'join' '.' 'fmap' ('join' '.' 'fmap' 'lift' '.' 'lift')
 --   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'lift' '.' 'lift')
 --   = 'join' '.' 'join' '.' 'fmap' ('fmap' 'lift') '.' 'fmap' ('lift')
 --   = 'join' '.' 'fmap' 'lift' '.' 'join' '.' 'fmap' 'lift'
---   = 'ract' '.' 'ract'@
+--   = 'rjoin' '.' 'rjoin'@
 monadTransRScale :: (Monad m, MonadTrans t, Monad (t m)) => t m (m a) -> t m a
 monadTransRScale = (lift =<<)
 
-instance (Monad m) => RightModule m (MaybeT m) where ract = monadTransRScale
+instance (Monad m) => RightModule m (MaybeT m) where rjoin = monadTransRScale
 
-instance (Monad m) => RightModule m (ExceptT e m) where ract = monadTransRScale
+instance (Monad m) => RightModule m (ExceptT e m) where rjoin = monadTransRScale
 
-instance (Monad m) => RightModule m (IdentityT m) where ract = monadTransRScale
+instance (Monad m) => RightModule m (IdentityT m) where rjoin = monadTransRScale
 
-instance (Monad m) => RightModule m (ReaderT r m) where ract = monadTransRScale
+instance (Monad m) => RightModule m (ReaderT r m) where rjoin = monadTransRScale
 
-instance (Monad m) => RightModule m (SelectT r m) where ract = monadTransRScale
+instance (Monad m) => RightModule m (SelectT r m) where rjoin = monadTransRScale
 
-instance (Monad m) => RightModule m (L.StateT r m) where ract = monadTransRScale
+instance (Monad m) => RightModule m (L.StateT r m) where rjoin = monadTransRScale
 
-instance (Monad m) => RightModule m (S.StateT r m) where ract = monadTransRScale
+instance (Monad m) => RightModule m (S.StateT r m) where rjoin = monadTransRScale
 
-instance (Monad m) => RightModule m (C.WriterT w m) where ract = monadTransRScale
+instance (Monad m) => RightModule m (C.WriterT w m) where rjoin = monadTransRScale
 
-instance (Monad m, Monoid w) => RightModule m (S.WriterT w m) where ract = monadTransRScale
+instance (Monad m, Monoid w) => RightModule m (S.WriterT w m) where rjoin = monadTransRScale
 
-instance (Monad m, Monoid w) => RightModule m (L.WriterT w m) where ract = monadTransRScale
+instance (Monad m, Monoid w) => RightModule m (L.WriterT w m) where rjoin = monadTransRScale
 
-instance (Monad m, Monoid w) => RightModule m (AccumT w m) where ract = monadTransRScale
+instance (Monad m, Monoid w) => RightModule m (AccumT w m) where rjoin = monadTransRScale
 
-instance (Monad m) => RightModule m (ContT r m) where ract = monadTransRScale
+instance (Monad m) => RightModule m (ContT r m) where rjoin = monadTransRScale
 
-instance (Monad m, Monoid w) => RightModule m (L.RWST r w s m) where ract = monadTransRScale
+instance (Monad m, Monoid w) => RightModule m (L.RWST r w s m) where rjoin = monadTransRScale
 
-instance (Monad m, Monoid w) => RightModule m (S.RWST r w s m) where ract = monadTransRScale
+instance (Monad m, Monoid w) => RightModule m (S.RWST r w s m) where rjoin = monadTransRScale
 
 -- | Default two-sided scalar multiplication for monad transformers.
 --
@@ -286,72 +286,72 @@ instance (Monad m, Monoid w) => RightModule m (S.RWST r w s m) where ract = mona
 --
 --   In other words,
 --
---   @  'biact'
+--   @  'bijoin'
 --   = 'join' '.' 'join' '.' 'lift' '.' 'fmap' ('fmap' 'lift')
 --   = 'join' '.' 'fmap' 'lift' '.' 'join' '.' 'lift'
---   = 'ract' '.' 'lact'
+--   = 'rjoin' '.' 'ljoin'
 --   = 'join' '.' 'fmap' 'lift' '.' 'join' '.' 'lift'
 --   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'lift') '.' 'lift'
 --   = 'join' '.' 'fmap' ('join' '.' 'fmap' 'lift') '.' 'lift'
---   = 'join' '.' 'fmap' 'ract' '.' 'lift'
---   = 'join' '.' 'lift' '.' 'fmap' 'ract'
---   = 'lact' '.' 'fmap' 'ract'@
+--   = 'join' '.' 'fmap' 'rjoin' '.' 'lift'
+--   = 'join' '.' 'lift' '.' 'fmap' 'rjoin'
+--   = 'ljoin' '.' 'fmap' 'rjoin'@
 monadTransBiScale :: (Monad m, MonadTrans t, Monad (t m)) => m (t m (m a)) -> t m a
 monadTransBiScale = join . join . lift . fmap (fmap lift)
 
-instance (Monad m) => BiModule m m (MaybeT m) where biact = monadTransBiScale
+instance (Monad m) => BiModule m m (MaybeT m) where bijoin = monadTransBiScale
 
-instance (Monad m) => BiModule m m (ExceptT e m) where biact = monadTransBiScale
+instance (Monad m) => BiModule m m (ExceptT e m) where bijoin = monadTransBiScale
 
-instance (Monad m) => BiModule m m (IdentityT m) where biact = monadTransBiScale
+instance (Monad m) => BiModule m m (IdentityT m) where bijoin = monadTransBiScale
 
-instance (Monad m) => BiModule m m (ReaderT r m) where biact = monadTransBiScale
+instance (Monad m) => BiModule m m (ReaderT r m) where bijoin = monadTransBiScale
 
-instance (Monad m) => BiModule m m (SelectT r m) where biact = monadTransBiScale
+instance (Monad m) => BiModule m m (SelectT r m) where bijoin = monadTransBiScale
 
-instance (Monad m) => BiModule m m (L.StateT r m) where biact = monadTransBiScale
+instance (Monad m) => BiModule m m (L.StateT r m) where bijoin = monadTransBiScale
 
-instance (Monad m) => BiModule m m (S.StateT r m) where biact = monadTransBiScale
+instance (Monad m) => BiModule m m (S.StateT r m) where bijoin = monadTransBiScale
 
-instance (Monad m) => BiModule m m (C.WriterT w m) where biact = monadTransBiScale
+instance (Monad m) => BiModule m m (C.WriterT w m) where bijoin = monadTransBiScale
 
-instance (Monad m, Monoid w) => BiModule m m (S.WriterT w m) where biact = monadTransBiScale
+instance (Monad m, Monoid w) => BiModule m m (S.WriterT w m) where bijoin = monadTransBiScale
 
-instance (Monad m, Monoid w) => BiModule m m (L.WriterT w m) where biact = monadTransBiScale
+instance (Monad m, Monoid w) => BiModule m m (L.WriterT w m) where bijoin = monadTransBiScale
 
-instance (Monad m, Monoid w) => BiModule m m (AccumT w m) where biact = monadTransBiScale
+instance (Monad m, Monoid w) => BiModule m m (AccumT w m) where bijoin = monadTransBiScale
 
-instance (Monad m) => BiModule m m (ContT r m) where biact = monadTransBiScale
+instance (Monad m) => BiModule m m (ContT r m) where bijoin = monadTransBiScale
 
-instance (Monad m, Monoid w) => BiModule m m (L.RWST r w s m) where biact = monadTransBiScale
+instance (Monad m, Monoid w) => BiModule m m (L.RWST r w s m) where bijoin = monadTransBiScale
 
-instance (Monad m, Monoid w) => BiModule m m (S.RWST r w s m) where biact = monadTransBiScale
+instance (Monad m, Monoid w) => BiModule m m (S.RWST r w s m) where bijoin = monadTransBiScale
 
 -------------------------------------------------------
 
 instance (Monad m) => LeftModule Maybe (MaybeT m) where
-  lact = join . MaybeT . pure
+  ljoin = join . MaybeT . pure
 
 instance (Monad m) => RightModule Maybe (MaybeT m) where
-  ract = MaybeT . fmap join . runMaybeT
+  rjoin = MaybeT . fmap join . runMaybeT
 
 instance (Monad m) => LeftModule (Either e) (MaybeT m) where
-  lact = join . MaybeT . fmap (either (const Nothing) Just) . pure @m
+  ljoin = join . MaybeT . fmap (either (const Nothing) Just) . pure @m
 
 instance (Monad m) => RightModule (Either e) (MaybeT m) where
-  ract = MaybeT . fmap (either (const Nothing) Just =<<) . runMaybeT
+  rjoin = MaybeT . fmap (either (const Nothing) Just =<<) . runMaybeT
 
 instance (Monoid e, Monad m) => LeftModule Maybe (ExceptT e m) where
-  lact = join . ExceptT . pure . maybe (Left mempty) Right
+  ljoin = join . ExceptT . pure . maybe (Left mempty) Right
 
 instance (Monoid e, Monad m) => RightModule Maybe (ExceptT e m) where
-  ract = ExceptT . fmap (maybe (Left mempty) Right =<<) . runExceptT
+  rjoin = ExceptT . fmap (maybe (Left mempty) Right =<<) . runExceptT
 
 instance (Monad m) => LeftModule (Either e) (ExceptT e m) where
-  lact = join . ExceptT . pure
+  ljoin = join . ExceptT . pure
 
 instance (Monoid e, Monad m) => RightModule (Either e) (ExceptT e m) where
-  ract = ExceptT . fmap join . runExceptT
+  rjoin = ExceptT . fmap join . runExceptT
 
 instance (Monad m) => BiModule Maybe Maybe (MaybeT m)
 
