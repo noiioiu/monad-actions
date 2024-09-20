@@ -43,8 +43,8 @@ leftmodule =
     leftP :: f a -> Property
     assocP :: m (m (f a)) -> Property
 
-    leftP a = lact (pure @m a) =-= a
-    assocP a = lact (join a) =-= lact (fmap lact a)
+    leftP a = ljoin (pure @m a) =-= a
+    assocP a = ljoin (join a) =-= ljoin (fmap ljoin a)
 
 rightmodule ::
   forall m f a.
@@ -66,8 +66,8 @@ rightmodule =
     rightP :: f a -> Property
     assocP :: f (m (m a)) -> Property
 
-    rightP a = ract (fmap (pure @m) a) =-= a
-    assocP a = ract (fmap join a) =-= ract (ract a)
+    rightP a = rjoin (fmap (pure @m) a) =-= a
+    assocP a = rjoin (fmap join a) =-= rjoin (rjoin a)
 
 bimodule ::
   forall s t f a.
@@ -89,8 +89,8 @@ bimodule =
     assoc1P :: s (f (t a)) -> Property
     assoc2P :: s (f (t a)) -> Property
 
-    assoc1P a = biact a =-= ract (lact a)
-    assoc2P a = biact a =-= lact (fmap ract a)
+    assoc1P a = bijoin a =-= rjoin (ljoin a)
+    assoc2P a = bijoin a =-= ljoin (fmap rjoin a)
 
 instance (CoArbitrary s, Arbitrary (m (a, s)), Function s) => Arbitrary (StateT s m a) where
   arbitrary = StateT . applyFun <$> arbitrary
@@ -139,8 +139,8 @@ rightmodulestate =
     rightP :: Fun s (m (a, s)) -> Property
     assocP :: Fun s (m (m (m a), s)) -> Property
 
-    rightP a = ract (fmap (pure @m) (StateT $ applyFun a)) =-= StateT (applyFun a)
-    assocP a = ract (fmap join (StateT $ applyFun a)) =-= ract (ract (StateT $ applyFun a))
+    rightP a = rjoin (fmap (pure @m) (StateT $ applyFun a)) =-= StateT (applyFun a)
+    assocP a = rjoin (fmap join (StateT $ applyFun a)) =-= rjoin (rjoin (StateT $ applyFun a))
 
 leftmodulestate ::
   forall m s a.
@@ -168,8 +168,8 @@ leftmodulestate =
     leftP :: m (Fun s (m (a, s))) -> Property
     assocP :: m (m (Fun s (m (a, s)))) -> Property
 
-    leftP a = lact (pure @m (StateT . applyFun <$> a)) =-= (StateT . applyFun <$> a)
-    assocP a = lact (join (fmap (StateT . applyFun) <$> a)) =-= lact (fmap lact (fmap (StateT . applyFun) <$> a))
+    leftP a = ljoin (pure @m (StateT . applyFun <$> a)) =-= (StateT . applyFun <$> a)
+    assocP a = ljoin (join (fmap (StateT . applyFun) <$> a)) =-= ljoin (fmap ljoin (fmap (StateT . applyFun) <$> a))
 
 bimodulestate ::
   forall m s a.
@@ -194,8 +194,8 @@ bimodulestate =
     assoc1P :: m (Fun s (m (m a, s))) -> Property
     assoc2P :: m (Fun s (m (m a, s))) -> Property
 
-    assoc1P a = biact (StateT . applyFun <$> a) =-= ract (lact (StateT . applyFun <$> a))
-    assoc2P a = biact (StateT . applyFun <$> a) =-= lact (fmap ract (StateT . applyFun <$> a))
+    assoc1P a = bijoin (StateT . applyFun <$> a) =-= rjoin (ljoin (StateT . applyFun <$> a))
+    assoc2P a = bijoin (StateT . applyFun <$> a) =-= ljoin (fmap rjoin (StateT . applyFun <$> a))
 
 instance (Show s, Arbitrary s, EqProp (m a)) => EqProp (ReaderT s m a) where
   a =-= b = runReaderT a =-= runReaderT b
@@ -225,8 +225,8 @@ rightmodulereader =
     rightP :: Fun s (m a) -> Property
     assocP :: Fun s (m (m (m a))) -> Property
 
-    rightP a = ract (fmap (pure @m) (ReaderT $ applyFun a)) =-= ReaderT (applyFun a)
-    assocP a = ract (fmap join (ReaderT $ applyFun a)) =-= ract (ract (ReaderT $ applyFun a))
+    rightP a = rjoin (fmap (pure @m) (ReaderT $ applyFun a)) =-= ReaderT (applyFun a)
+    assocP a = rjoin (fmap join (ReaderT $ applyFun a)) =-= rjoin (rjoin (ReaderT $ applyFun a))
 
 instance (Arbitrary (m (a, w))) => Arbitrary (WriterT w m a) where
   arbitrary = WriterT <$> arbitrary
