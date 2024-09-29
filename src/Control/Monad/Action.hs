@@ -28,6 +28,7 @@ import Control.Monad.Trans.Writer.CPS qualified as C
 import Control.Monad.Trans.Writer.Lazy qualified as L
 import Control.Monad.Trans.Writer.Strict qualified as S
 import Data.Functor.Compose (Compose (..))
+import Data.List.NonEmpty qualified as NE
 import Data.Maybe (catMaybes)
 
 -- | Instances must satisfy the following laws:
@@ -79,11 +80,25 @@ instance RightModule Maybe [] where rjoin = catMaybes
 
 instance LeftModule Maybe [] where ljoin = concat
 
+instance LeftModule NE.NonEmpty [] where ljoin = concat
+
+instance RightModule NE.NonEmpty [] where rjoin = (>>= NE.toList)
+
 instance BiModule Maybe Maybe []
 
 instance BiModule Maybe [] []
 
 instance BiModule [] Maybe []
+
+instance BiModule NE.NonEmpty NE.NonEmpty []
+
+instance BiModule [] NE.NonEmpty []
+
+instance BiModule NE.NonEmpty [] []
+
+instance BiModule Maybe NE.NonEmpty []
+
+instance BiModule NE.NonEmpty Maybe []
 
 instance RightModule (Either e) Maybe where
   rjoin (Just (Right x)) = Just x
