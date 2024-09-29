@@ -15,6 +15,7 @@ import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Writer
 import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Compose
 import Data.Functor.Compose
 import Test.QuickCheck
 import Test.QuickCheck.Checkers
@@ -109,6 +110,12 @@ instance (Arbitrary (m (Either e a))) => Arbitrary (ExceptT e m a) where
 
 instance (EqProp (m (Either e a))) => EqProp (ExceptT e m a) where
   ExceptT x =-= ExceptT y = x =-= y
+
+instance (Arbitrary ((s (t (m))) a)) => Arbitrary (ComposeT s t m a) where
+  arbitrary = ComposeT <$> arbitrary
+
+instance (EqProp ((s (t (m))) a)) => EqProp (ComposeT s t m a) where
+  ComposeT x =-= ComposeT y = x =-= y
 
 
 
@@ -270,6 +277,9 @@ main =
     , rightmodule @Maybe @(ExceptT (Sum Int) []) @Int
     , leftmodule @Maybe @(ExceptT (Sum Int) []) @Int
     , bimodule @(Either (Sum Int)) @Maybe @(ExceptT (Sum Int) []) @Int
+
+    , rightmodule @[] @(ComposeT MaybeT (ExceptT Bool) []) @Int
+    , leftmodule @[] @(ComposeT MaybeT (ExceptT Bool) []) @Int
 
     , rightmodule @Maybe @(MaybeT []) @Int
     , leftmodule @Maybe @(MaybeT []) @Int
