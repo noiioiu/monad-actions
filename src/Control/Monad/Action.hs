@@ -13,10 +13,11 @@ where
 
 import Control.Monad (join)
 import Control.Monad.Identity (Identity (..), IdentityT)
+import Control.Monad.Morph
 import Control.Monad.RWS.Lazy qualified as L
 import Control.Monad.RWS.Strict qualified as S
-import Control.Monad.Trans (MonadTrans (..))
 import Control.Monad.Trans.Accum (AccumT)
+import Control.Monad.Trans.Compose
 import Control.Monad.Trans.Cont (ContT)
 import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import Control.Monad.Trans.Maybe (MaybeT (..))
@@ -213,6 +214,9 @@ instance (Monad m, Monoid w) => LeftModule m (L.RWST r w s m) where ljoin = mona
 
 instance (Monad m, Monoid w) => LeftModule m (S.RWST r w s m) where ljoin = monadTransLScale
 
+instance (MFunctor f, MFunctor g, MonadTrans f, MonadTrans g, Monad m, Monad (f (g m))) => LeftModule m (ComposeT f g m) where
+  ljoin = monadTransLScale
+
 -- | Default right scalar multiplication for monad transformers.
 --
 --   We prove the right module laws using string diagrams, just as in the case
@@ -288,6 +292,9 @@ instance (Monad m, Monoid w) => RightModule m (L.RWST r w s m) where rjoin = mon
 
 instance (Monad m, Monoid w) => RightModule m (S.RWST r w s m) where rjoin = monadTransRScale
 
+instance (MFunctor f, MFunctor g, MonadTrans f, MonadTrans g, Monad m, Monad (f (g m))) => RightModule m (ComposeT f g m) where
+  rjoin = monadTransRScale
+
 -- | Default two-sided scalar multiplication for monad transformers.
 --
 --   We prove the bimodule law using string diagrams, just as in the case
@@ -341,6 +348,9 @@ instance (Monad m) => BiModule m m (ContT r m) where bijoin = monadTransBiScale
 instance (Monad m, Monoid w) => BiModule m m (L.RWST r w s m) where bijoin = monadTransBiScale
 
 instance (Monad m, Monoid w) => BiModule m m (S.RWST r w s m) where bijoin = monadTransBiScale
+
+instance (MFunctor f, MFunctor g, MonadTrans f, MonadTrans g, Monad m, Monad (f (g m))) => BiModule m m (ComposeT f g m) where
+  bijoin = monadTransBiScale
 
 -------------------------------------------------------
 
