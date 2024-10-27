@@ -9,6 +9,7 @@
 
 module Main (main) where
 
+import Control.Monad
 import Control.Monad.Action
 import Control.Monad.Identity
 import Control.Monad.Reader
@@ -17,6 +18,7 @@ import Control.Monad.Writer
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.Compose
 import Data.Functor.Compose
+import Data.Monoid
 import Test.QuickCheck
 import Test.QuickCheck.Checkers
 import Control.Monad.Action.Left qualified as L

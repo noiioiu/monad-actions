@@ -1,6 +1,7 @@
+-- | A monad action is a monoid action in the category of endofunctors, what's the problem?
+
 {-# LANGUAGE IncoherentInstances #-}
 
--- | A monad action is a monoid action in the category of endofunctors, what's the problem?
 module Control.Monad.Action
   ( LeftModule (..),
     RightModule (..),
