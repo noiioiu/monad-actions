@@ -1,3 +1,5 @@
+{-# LANGUAGE IncoherentInstances #-}
+
 -- | Given a monad \(M\) on a category \(\mathcal{D}\) with unit \(\eta\) and
 --     multiplication \(\mu\) and a functor \(F\) from \(\mathcal{C}\) to \(\mathcal{D}\),
 --     a left monad action of \(M\) on \(F\) is a natural transformation \(\nu\) such that
@@ -18,9 +20,6 @@
 --
 --     See [this blog post](https://stringdiagram.com/2023/04/23/monad-actions/) by Dan Marsden
 --     or the paper /Modules over monads and their algebras/ by Piróg, Wu, and Gibbons.
-
-{-# LANGUAGE IncoherentInstances #-}
-
 module Control.Monad.Action
   ( LeftModule (..),
     RightModule (..),

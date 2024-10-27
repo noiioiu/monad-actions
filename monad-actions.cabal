@@ -23,10 +23,12 @@ name:               monad-actions
 version:            0.1.0.0
 
 -- A short (one-line) description of the package.
--- synopsis:
+synopsis: Left or right actions of a monad on a functor
 
 -- A longer description of the package.
--- description:
+description: This package defines classes for left and rght actions of
+             monads on functors.  It also includes modules for using
+             monad actions with qualified do notation.
 
 -- The license under which the package is released.
 license:            ISC
@@ -71,10 +73,9 @@ library
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.18.0.0,
-                      mtl >=2.2.2,
-                      transformers >=0.5.6.2,
-                      mmorph >=1.2.0,
-                      kan-extensions,
+                      mtl ^>=2.2.2,
+                      transformers ^>=0.5.6.2,
+                      mmorph ^>=1.2.0,
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -109,7 +110,7 @@ test-suite monad-actions-test
         QuickCheck,
         checkers,
         mtl,
-        transformers >=0.5.6.2,
+        transformers ^>=0.5.6.2,
         base ^>=4.18.0.0,
-        mmorph >=1.2.0,
+        mmorph ^>=1.2.0,
         monad-actions
