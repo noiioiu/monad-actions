@@ -1,3 +1,4 @@
+-- | This module is meant to be used with the @QualifiedDo@ extension.
 module Control.Monad.Action.Right ((>>=), (>>), (=<<), (>=>), (<=<), pure, return, fail, join) where
 
 import Control.Monad.Action
