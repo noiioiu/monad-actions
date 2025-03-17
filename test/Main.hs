@@ -112,10 +112,6 @@ deriving instance (Arbitrary ((s (t (m))) a)) => Arbitrary (ComposeT s t m a)
 
 deriving instance (EqProp ((s (t (m))) a)) => EqProp (ComposeT s t m a)
 
-deriving instance (EqProp a) => EqProp (Sum a)
-
-deriving instance (EqProp a) => EqProp (Product a)
-
 rightmodulestate ::
   forall m s a.
   ( Monad m,
