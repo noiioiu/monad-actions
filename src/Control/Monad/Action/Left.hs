@@ -2,7 +2,8 @@
 module Control.Monad.Action.Left ((>>=), (>>), (=<<), (>=>), (<=<), (<*>), fmap, pure, return, fail, join) where
 
 import Control.Monad.Action
-import Prelude hiding (return, (<*>), (=<<), (>>), (>>=))
+import Prelude hiding (fmap, pure, return, (<*>), (=<<), (>>), (>>=))
+import Prelude qualified as P
 
 infixl 1 >>=
 
@@ -28,6 +29,12 @@ infixr 1 <=<
 
 (<=<) :: (LeftModule m f) => (b -> f c) -> (a -> m b) -> a -> f c
 (<=<) = (.) . (=<<)
+
+fmap :: (Functor f) => (a -> b) -> f a -> f b
+fmap = P.fmap
+
+pure :: (Applicative f) => a -> f a
+pure = P.pure
 
 return :: (Applicative f) => a -> f a
 return = pure
