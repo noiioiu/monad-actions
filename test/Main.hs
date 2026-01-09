@@ -25,6 +25,8 @@ import Data.Functor.Compose
 import Data.Monoid
 import Test.QuickCheck
 import Test.QuickCheck.Checkers
+import Test.Tasty
+import Test.Tasty.QuickCheck
 
 leftmodule ::
   forall m f a.
@@ -250,50 +252,52 @@ main :: IO ()
 main =
   print (getCompose rdotest)
     >> print (runStateT ldotest 'a')
-    >> mapM_
-      quickBatch
-      [ leftmodule @Maybe @[] @Int,
-        rightmodule @Maybe @[] @Int,
-        rightmodule @(Either Int) @Maybe @Int,
-        leftmodule @(Either Char) @Maybe @Int,
-        bimodule @(Either Char) @(Either Bool) @Maybe @Int,
-        bimodule @(Either Char) @(Either Int) @Maybe @Int,
-        bimodule @Maybe @(Either Int) @Maybe @Int,
-        bimodule @(Either Char) @Maybe @Maybe @Int,
-        rightmodule @(Either Int) @(MaybeT []) @Int,
-        leftmodule @(Either Int) @(MaybeT []) @Int,
-        bimodule @(Either Int) @(Either [Bool]) @(MaybeT []) @Int,
-        rightmodule @(Either (Sum Int)) @(ExceptT (Sum Int) []) @Int,
-        leftmodule @(Either (Sum Int)) @(ExceptT (Sum Int) []) @Int,
-        bimodule @(Either (Sum Int)) @(Either (Sum Int)) @(ExceptT (Sum Int) []) @Int,
-        rightmodule @Maybe @(ExceptT (Sum Int) []) @Int,
-        leftmodule @Maybe @(ExceptT (Sum Int) []) @Int,
-        bimodule @(Either (Sum Int)) @Maybe @(ExceptT (Sum Int) []) @Int,
-        rightmodule @[] @(ComposeT MaybeT (ExceptT Bool) []) @Int,
-        leftmodule @[] @(ComposeT MaybeT (ExceptT Bool) []) @Int,
-        rightmodule @Maybe @(MaybeT []) @Int,
-        leftmodule @Maybe @(MaybeT []) @Int,
-        bimodule @Maybe @Maybe @(MaybeT []) @Int,
-        -- , bimodule @Maybe @Maybe @[] @Int
-        -- , leftmodule @[] @(Compose [] ((,) Bool)) @Bool
-        -- , rightmodule @Maybe @(Compose ((,) Bool) []) @Bool
-        -- , bimodule @Maybe @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool
-        -- , leftmodule @Maybe @[] @Int
-        -- , rightmodule @Maybe @[] @Int
-        -- , bimodule @Maybe @Maybe @[] @Int
-        -- , bimodule @Maybe @[] @[] @Int
-        -- , bimodule @[] @Maybe @[] @Int
-        -- , bimodule @[] @[] @[] @Int
-        -- , leftmodule @Identity @Identity @Int
+    >> defaultMain
+      ( testGroup "monad action laws" $
+          uncurry testProperties
+            <$> [ leftmodule @Maybe @[] @Int,
+                  rightmodule @Maybe @[] @Int,
+                  rightmodule @(Either Int) @Maybe @Int,
+                  leftmodule @(Either Char) @Maybe @Int,
+                  bimodule @(Either Char) @(Either Bool) @Maybe @Int,
+                  bimodule @(Either Char) @(Either Int) @Maybe @Int,
+                  bimodule @Maybe @(Either Int) @Maybe @Int,
+                  bimodule @(Either Char) @Maybe @Maybe @Int,
+                  rightmodule @(Either Int) @(MaybeT []) @Int,
+                  leftmodule @(Either Int) @(MaybeT []) @Int,
+                  bimodule @(Either Int) @(Either [Bool]) @(MaybeT []) @Int,
+                  rightmodule @(Either (Sum Int)) @(ExceptT (Sum Int) []) @Int,
+                  leftmodule @(Either (Sum Int)) @(ExceptT (Sum Int) []) @Int,
+                  bimodule @(Either (Sum Int)) @(Either (Sum Int)) @(ExceptT (Sum Int) []) @Int,
+                  rightmodule @Maybe @(ExceptT (Sum Int) []) @Int,
+                  leftmodule @Maybe @(ExceptT (Sum Int) []) @Int,
+                  bimodule @(Either (Sum Int)) @Maybe @(ExceptT (Sum Int) []) @Int,
+                  rightmodule @[] @(ComposeT MaybeT (ExceptT Bool) []) @Int,
+                  leftmodule @[] @(ComposeT MaybeT (ExceptT Bool) []) @Int,
+                  rightmodule @Maybe @(MaybeT []) @Int,
+                  leftmodule @Maybe @(MaybeT []) @Int,
+                  bimodule @Maybe @Maybe @(MaybeT []) @Int,
+                  -- , bimodule @Maybe @Maybe @[] @Int
+                  -- , leftmodule @[] @(Compose [] ((,) Bool)) @Bool
+                  -- , rightmodule @Maybe @(Compose ((,) Bool) []) @Bool
+                  -- , bimodule @Maybe @Maybe @(Compose [] (Compose (Either Bool) Maybe)) @Bool
+                  -- , leftmodule @Maybe @[] @Int
+                  -- , rightmodule @Maybe @[] @Int
+                  -- , bimodule @Maybe @Maybe @[] @Int
+                  -- , bimodule @Maybe @[] @[] @Int
+                  -- , bimodule @[] @Maybe @[] @Int
+                  -- , bimodule @[] @[] @[] @Int
+                  -- , leftmodule @Identity @Identity @Int
 
-        rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char
-        -- , rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char
-        -- , rightmodulereader @(Either Bool) @Char @Int
+                  rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char
+                  -- , rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char
+                  -- , rightmodulereader @(Either Bool) @Char @Int
 
-        -- , leftmodulestate @(Writer (Sum Int)) @Int @Bool
-        -- , rightmodulestate @(Writer (Sum Int)) @Int @Bool
-        -- , rightmodulestate @(Either Bool) @Int @Bool
-        -- , bimodulestate @(WriterT (Sum Int) Maybe) @Int @Bool
-        -- , rightmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
-        -- , leftmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
-      ]
+                  -- , leftmodulestate @(Writer (Sum Int)) @Int @Bool
+                  -- , rightmodulestate @(Writer (Sum Int)) @Int @Bool
+                  -- , rightmodulestate @(Either Bool) @Int @Bool
+                  -- , bimodulestate @(WriterT (Sum Int) Maybe) @Int @Bool
+                  -- , rightmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
+                  -- , leftmodule @(Writer (Sum Float)) @(Writer (Sum Float)) @Int -- this should fail because Sum Float is not a monoid
+                ]
+      )
