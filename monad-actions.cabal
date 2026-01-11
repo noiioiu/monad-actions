@@ -73,9 +73,9 @@ library
 
     -- Other library packages from which modules are imported.
     build-depends:    base ^>=4.20.0.0,
-                      mtl ^>=2.3.1,
-                      transformers ^>=0.6.1.2,
-                      mmorph ^>=1.2.0,
+                      mtl,
+                      transformers,
+                      mmorph,
 
     -- Directories containing source files.
     hs-source-dirs:   src
@@ -109,6 +109,8 @@ test-suite monad-actions-test
     build-depends:
         QuickCheck,
         checkers,
+        tasty,
+        tasty-quickcheck,
         mtl,
         transformers,
         base ^>=4.20.0.0,
