@@ -61,12 +61,14 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  Control.Monad.Action,
+    exposed-modules:  Control.Monad.Action.Class,
+                      Control.Monad.Action.Instances,
+                      Control.Monad.Action,
                       Control.Monad.Action.Left,
                       Control.Monad.Action.Right,
 
     -- Modules included in this library but not exported.
-    -- other-modules:
+    other-modules:    Control.Monad.Action.TH
 
     -- LANGUAGE extensions used by modules in this package.
     -- other-extensions:
@@ -76,6 +78,7 @@ library
                       mtl,
                       transformers,
                       mmorph,
+                      template-haskell
 
     -- Directories containing source files.
     hs-source-dirs:   src
