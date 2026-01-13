@@ -31,7 +31,7 @@ description: This package defines classes for left and rght actions of
              monad actions with qualified do notation.
 
 -- The license under which the package is released.
-license:            ISC
+license:            AGPL-3.0-or-later
 
 -- The file containing the license text.
 license-file:       LICENSE
