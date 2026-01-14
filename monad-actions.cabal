@@ -78,6 +78,7 @@ library
                       mtl,
                       transformers,
                       kan-extensions,
+                      free,
                       mmorph,
                       template-haskell
 
@@ -117,6 +118,8 @@ test-suite monad-actions-test
         tasty-quickcheck,
         mtl,
         transformers,
+        kan-extensions,
+        free,
         base ^>=4.20.0.0,
         mmorph,
         monad-actions

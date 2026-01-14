@@ -19,8 +19,10 @@ import Control.Monad.Identity
 import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Trans.Compose
+import Control.Monad.Trans.Free (FreeF (..), FreeT (..))
 import Control.Monad.Trans.Maybe
 import Control.Monad.Writer
+import Data.Functor.Classes (Eq1)
 import Data.Functor.Compose
 import Data.Monoid
 import Test.QuickCheck
@@ -248,6 +250,19 @@ rdotest = R.do
   x <- Compose $ ZipList [[1, 2, 3], [4, 5, 6], [7, 8, 9]]
   [x * x, x]
 
+instance (Arbitrary1 f) => Arbitrary2 (FreeF f) where liftArbitrary2 a b = oneof [Pure <$> a, Free <$> liftArbitrary b]
+
+instance (Functor f, Functor m, Arbitrary1 m, Arbitrary1 f) => Arbitrary1 (FreeT f m) where
+  liftArbitrary a = FreeT <$> liftArbitrary (liftArbitrary2 a $ liftArbitrary a)
+
+instance (Functor f, Functor m, Arbitrary1 m, Arbitrary1 f, Arbitrary a) => Arbitrary (FreeT f m a) where
+  arbitrary = liftArbitrary arbitrary
+
+instance (EqProp a, EqProp (f b)) => EqProp (FreeF f a b)
+
+instance (Eq1 f, Eq1 m, Eq a) => EqProp (FreeT f m a) where
+  (=-=) = eq
+
 main :: IO ()
 main =
   print (getCompose rdotest)
@@ -288,6 +303,7 @@ main =
                   -- , bimodule @[] @Maybe @[] @Int
                   -- , bimodule @[] @[] @[] @Int
                   leftmodule @Identity @Identity @Int,
+                  leftmodule @Maybe @(FreeT Maybe Maybe) @Int,
                   rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char
                   -- , rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char
                   -- , rightmodulereader @(Either Bool) @Char @Int
