@@ -9,7 +9,7 @@ import Control.Monad (join)
 import Control.Monad.Action.Class
 import Control.Monad.Action.TH
 import Control.Monad.Co ()
-import Control.Monad.Codensity ()
+import Control.Monad.Codensity (Codensity (..))
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Morph ()
@@ -131,3 +131,16 @@ instance (Monoid e, Monad m) => BiModule (Either e) Maybe (ExceptT e m)
 instance (Monoid e, Monad m) => BiModule Maybe (Either e) (ExceptT e m)
 
 instance (Monoid e, Monad m) => BiModule (Either e) (Either e) (ExceptT e m)
+
+-- | Proof that @f@ is always a left module over @'Codensity' f@:
+--   - @   'ljoin' ('join' m)
+--       = 'ljoin' ('Codensity' (\c -> 'runCodensity' m (\a -> 'runCodensity' a c)))
+--       = (\c -> 'runCodensity' m (\a -> 'runCodensity' a c)) id
+--       = 'runCodensity' m (\a -> 'runCodensity' a 'id')
+--       = 'runCodensity' m 'ljoin' 'runCodensity' m (\x -> 'ljoin' x)
+--       = (\k -> 'runCodensity' m (\x -> k ('ljoin' x))) 'id'
+--       = 'ljoin' (Codensity (\k -> 'runCodensity' m (\x -> k ('ljoin' x))))
+--       = 'ljoin' ('fmap' 'ljoin' m)@
+--   - @'ljoin' ('pure' x) = 'ljoin' ('Codensity' (\x -> k x)) = (\k -> k x) 'id' = x@
+instance (Functor f) => LeftModule (Codensity f) f where
+  ljoin c = runCodensity c id
