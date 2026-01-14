@@ -287,8 +287,7 @@ main =
                   -- , bimodule @Maybe @[] @[] @Int
                   -- , bimodule @[] @Maybe @[] @Int
                   -- , bimodule @[] @[] @[] @Int
-                  -- , leftmodule @Identity @Identity @Int
-
+                  leftmodule @Identity @Identity @Int,
                   rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char
                   -- , rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char
                   -- , rightmodulereader @(Either Bool) @Char @Int

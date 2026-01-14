@@ -1,4 +1,5 @@
 {-# LANGUAGE IncoherentInstances #-}
+{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -7,6 +8,8 @@ module Control.Monad.Action.Instances where
 import Control.Monad (join)
 import Control.Monad.Action.Class
 import Control.Monad.Action.TH
+import Control.Monad.Co ()
+import Control.Monad.Codensity ()
 import Control.Monad.Except (runExceptT)
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Morph ()
