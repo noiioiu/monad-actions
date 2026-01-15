@@ -21,6 +21,9 @@ class (Monad m, Functor f) => LeftModule m f where
     m (f a) ->
     -- | left monad action
     f a
+  ljoin = (`lbind` id)
+  lbind :: m a -> (a -> f b) -> f b
+  lbind = (ljoin .) . flip fmap
 
 -- | Instances must satisfy the following laws:
 --
@@ -32,6 +35,9 @@ class (Monad m, Functor f) => RightModule m f where
     f (m a) ->
     -- | right monad action
     f a
+  rjoin = (`rbind` id)
+  rbind :: f a -> (a -> m b) -> f b
+  rbind = (rjoin .) . flip fmap
 
 -- | Given two monads r and s, an (r, s) bimodule is a functor that is a left module over r and a right module over s, where the two actions are compatible.
 --   Instances must satisfy the following law in addition to the laws for @'LeftModule'@ and @'RightModule'@:

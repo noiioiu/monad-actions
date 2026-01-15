@@ -8,17 +8,17 @@ import Prelude qualified as P
 infixl 1 >>=
 
 (>>=) :: (RightModule m f) => f a -> (a -> m b) -> f b
-(>>=) = (rjoin .) . flip fmap
+(>>=) = rbind
 
 infixr 1 =<<
 
 (=<<) :: (RightModule m f) => (a -> m b) -> f a -> f b
-(=<<) = (rjoin .) . fmap
+(=<<) = flip rbind
 
 infixl 1 >>
 
 (>>) :: (RightModule m f) => f a -> m b -> f b
-(>>) = (rjoin .) . flip (fmap . const)
+(>>) = (. const) . rbind
 
 infixr 1 >=>
 

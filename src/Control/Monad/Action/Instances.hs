@@ -28,15 +28,15 @@ import Control.Monad.Trans.Writer.Lazy qualified as L ()
 import Control.Monad.Trans.Writer.Strict qualified as S ()
 import Data.Functor.Compose (Compose (..))
 import Data.List.NonEmpty qualified as NE
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, mapMaybe)
 
 $(mkMonadTransLeftActionInstances)
 $(mkMonadTransRightActionInstances)
 $(mkMonadTransBiActionInstances)
 
-instance (Monad m) => LeftModule m m where ljoin = join
+instance (Monad m) => LeftModule m m where ljoin = join; lbind = (>>=)
 
-instance (Monad m) => RightModule m m where rjoin = join
+instance (Monad m) => RightModule m m where rjoin = join; rbind = (>>=)
 
 instance (Monad m) => BiModule m m m
 
@@ -46,11 +46,11 @@ instance (Functor f) => RightModule Identity f where rjoin = fmap runIdentity
 
 instance (Functor f) => BiModule Identity Identity f
 
-instance RightModule Maybe [] where rjoin = catMaybes
+instance RightModule Maybe [] where rjoin = catMaybes; rbind = flip mapMaybe
 
-instance LeftModule Maybe [] where ljoin = concat
+instance LeftModule Maybe [] where ljoin = concat; lbind = flip concatMap
 
-instance LeftModule NE.NonEmpty [] where ljoin = concat
+instance LeftModule NE.NonEmpty [] where ljoin = concat; lbind = flip concatMap
 
 instance RightModule NE.NonEmpty [] where rjoin = (>>= NE.toList)
 
@@ -86,9 +86,11 @@ instance BiModule Maybe (Either f) Maybe
 
 instance (Monad m, Functor f, LeftModule m n) => LeftModule m (Compose n f) where
   ljoin = Compose . ljoin . fmap getCompose
+  a `lbind` f = Compose $ a `lbind` (getCompose . f)
 
 instance (Monad m, Functor f, RightModule m n) => RightModule m (Compose f n) where
   rjoin = Compose . fmap rjoin . getCompose
+  a `rbind` f = Compose . fmap (`rbind` f) $ getCompose a
 
 instance (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiModule s t (Compose u (Compose f v))
 
@@ -144,3 +146,4 @@ instance (Monoid e, Monad m) => BiModule (Either e) (Either e) (ExceptT e m)
 --   - @'ljoin' ('pure' x) = 'ljoin' ('Codensity' (\x -> k x)) = (\k -> k x) 'id' = x@
 instance (Functor f) => LeftModule (Codensity f) f where
   ljoin c = runCodensity c id
+  a `lbind` f = runCodensity (f <$> a) id
