@@ -20,7 +20,7 @@ mkMonadTransLeftActionInstances =
               let ct' = (ct ++ [AppT (ConT ''Monad) m])
               let ty' = AppT (AppT (ConT ''LeftModule) m) (AppT ty m)
               pure $ InstanceD ol ct' ty' [ValD (VarP 'ljoin) (NormalB (VarE 'monadTransLScale)) []]
-          _ -> undefined
+          _ -> fail "Not an instance"
       _ -> pure []
 
 mkMonadTransRightActionInstances :: Q [Dec]
@@ -35,7 +35,7 @@ mkMonadTransRightActionInstances =
               let ct' = (ct ++ [AppT (ConT ''Monad) m])
               let ty' = AppT (AppT (ConT ''RightModule) m) (AppT ty m)
               pure $ InstanceD ol ct' ty' [ValD (VarP 'rjoin) (NormalB (VarE 'monadTransRScale)) []]
-          _ -> undefined
+          _ -> fail "Not an instance"
       _ -> pure []
 
 mkMonadTransBiActionInstances :: Q [Dec]
@@ -50,5 +50,5 @@ mkMonadTransBiActionInstances =
               let ct' = (ct ++ [AppT (ConT ''Monad) m, AppT (AppT (ConT ''LeftModule) m) (AppT ty m), AppT (AppT (ConT ''RightModule) m) (AppT ty m)])
               let ty' = AppT (AppT (AppT (ConT ''BiModule) m) m) (AppT ty m)
               pure $ InstanceD ol ct' ty' [ValD (VarP 'bijoin) (NormalB (VarE 'monadTransBiScale)) []]
-          _ -> undefined
+          _ -> fail "Not an instance"
       _ -> pure []
