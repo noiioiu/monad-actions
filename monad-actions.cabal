@@ -61,9 +61,7 @@ library
     import:           warnings
 
     -- Modules exported by the library.
-    exposed-modules:  Control.Monad.Action.Class,
-                      Control.Monad.Action.Instances,
-                      Control.Monad.Action,
+    exposed-modules:   Control.Monad.Action,
                       Control.Monad.Action.Left,
                       Control.Monad.Action.Right,
 
