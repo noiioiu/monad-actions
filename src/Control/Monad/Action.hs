@@ -231,9 +231,7 @@ monadTransRScale = (lift =<<)
 monadTransBiScale :: (Monad m, MonadTrans t, Monad (t m)) => m (t m (m a)) -> t m a
 monadTransBiScale = join . join . lift . fmap (fmap lift)
 
-$(mkMonadTransLeftActionInstances)
-$(mkMonadTransRightActionInstances)
-$(mkMonadTransBiActionInstances)
+$mkMonadTransModuleInstances
 
 instance {-# OVERLAPPING #-} (Monad m) => LeftModule m m where ljoin = join; lbind = (>>=)
 
