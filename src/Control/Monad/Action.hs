@@ -36,10 +36,11 @@ import Control.Monad.Action.TH
 import Control.Monad.Co ()
 import Control.Monad.Codensity (Codensity (..))
 import Control.Monad.Except (runExceptT)
+import Control.Monad.IO.Class
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Morph
-import Control.Monad.Morph ()
 import Control.Monad.Trans ()
+import Control.Monad.Trans.Accum ()
 import Control.Monad.Trans.Compose ()
 import Control.Monad.Trans.Except (ExceptT (..))
 import Control.Monad.Trans.Free ()
@@ -69,6 +70,7 @@ class (Monad m, Functor f) => LeftModule m f where
   ljoin = (`lbind` id)
   lbind :: m a -> (a -> f b) -> f b
   lbind = (ljoin .) . flip fmap
+  {-# MINIMAL ljoin | lbind #-}
 
 -- | Instances must satisfy the following laws:
 --
@@ -83,6 +85,7 @@ class (Monad m, Functor f) => RightModule m f where
   rjoin = (`rbind` id)
   rbind :: f a -> (a -> m b) -> f b
   rbind = (rjoin .) . flip fmap
+  {-# MINIMAL rjoin | rbind #-}
 
 -- | Given two monads r and s, an (r, s) bimodule is a functor that is a left module over r and a right module over s, where the two actions are compatible.
 --   Instances must satisfy the following law in addition to the laws for @'LeftModule'@ and @'RightModule'@:
@@ -332,6 +335,16 @@ instance (Monoid e, Monad m) => BiModule (Either e) Maybe (ExceptT e m)
 instance (Monoid e, Monad m) => BiModule Maybe (Either e) (ExceptT e m)
 
 instance (Monoid e, Monad m) => BiModule (Either e) (Either e) (ExceptT e m)
+
+-- | @'liftIO'@ is a monad homomorphism, so the proof that every monad with a lawful @'MonadIO'@
+--   instance is a {left,right,bi} module over @'IO'@ is the same as the proof for monad transformers.
+instance {-# OVERLAPS #-} (MonadIO m) => LeftModule IO m where
+  ljoin = join . liftIO
+
+instance {-# OVERLAPS #-} (MonadIO m) => RightModule IO m where
+  rjoin = (>>= liftIO)
+
+instance {-# OVERLAPS #-} (MonadIO m) => BiModule IO IO m
 
 -- | Proof that @f@ is always a left module over @'Codensity' f@:
 --   - @   'ljoin' ('join' m)

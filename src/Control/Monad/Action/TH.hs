@@ -1,5 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskellQuotes #-}
 
 module Control.Monad.Action.TH (mkMonadTransModuleInstances) where
 
@@ -20,15 +20,15 @@ mkMonadTransModuleInstances =
             do
               m <- VarT <$> newName "m"
               let ct' = ct ++ [AppT (ConT ''Monad) m]
-              let tyL = AppT (AppT (ConT $ mkName "LeftModule") m) (AppT ty m)
-              let tyR = AppT (AppT (ConT $ mkName "RightModule") m) (AppT ty m)
-              let tyB = AppT (AppT (AppT (ConT $ mkName "BiModule") m) m) (AppT ty m)
               let ctB =
                     ct
                       ++ [ AppT (ConT ''Monad) m,
                            AppT (AppT (ConT $ mkName "LeftModule") m) (AppT ty m),
                            AppT (AppT (ConT $ mkName "RightModule") m) (AppT ty m)
                          ]
+              let tyL = AppT (AppT (ConT $ mkName "LeftModule") m) (AppT ty m)
+              let tyR = AppT (AppT (ConT $ mkName "RightModule") m) (AppT ty m)
+              let tyB = AppT (AppT (AppT (ConT $ mkName "BiModule") m) m) (AppT ty m)
               pure $
                 fmap
                   (uncurry3 $ InstanceD (Just Overlaps))
