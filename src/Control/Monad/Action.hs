@@ -35,7 +35,6 @@ import Control.Monad (join)
 import Control.Monad.Action.TH
 import Control.Monad.Co ()
 import Control.Monad.Codensity (Codensity (..))
-import Control.Monad.Except (runExceptT)
 import Control.Monad.IO.Class
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Morph
