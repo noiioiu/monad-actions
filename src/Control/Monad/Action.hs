@@ -242,11 +242,11 @@ instance {-# OVERLAPPING #-} (Monad m) => RightModule m m where rjoin = join; rb
 
 instance {-# OVERLAPPING #-} (Monad m) => BiModule m m m
 
-instance {-# OVERLAPS #-} (Functor f) => LeftModule Identity f where ljoin = runIdentity
+instance {-# INCOHERENT #-} (Functor f) => LeftModule Identity f where ljoin = runIdentity
 
-instance {-# OVERLAPS #-} (Functor f) => RightModule Identity f where rjoin = fmap runIdentity
+instance {-# INCOHERENT #-} (Functor f) => RightModule Identity f where rjoin = fmap runIdentity
 
-instance {-# OVERLAPS #-} (Functor f) => BiModule Identity Identity f
+instance {-# INCOHERENT #-} (Functor f) => BiModule Identity Identity f
 
 instance RightModule Maybe [] where rjoin = catMaybes; rbind = flip mapMaybe
 
@@ -286,15 +286,15 @@ instance BiModule (Either e) Maybe Maybe
 
 instance BiModule Maybe (Either f) Maybe
 
-instance {-# OVERLAPS #-} (Monad m, Functor f, LeftModule m n) => LeftModule m (Compose n f) where
+instance {-# INCOHERENT #-} (Monad m, Functor f, LeftModule m n) => LeftModule m (Compose n f) where
   ljoin = Compose . ljoin . fmap getCompose
   a `lbind` f = Compose $ a `lbind` (getCompose . f)
 
-instance {-# OVERLAPS #-} (Monad m, Functor f, RightModule m n) => RightModule m (Compose f n) where
+instance {-# INCOHERENT #-} (Monad m, Functor f, RightModule m n) => RightModule m (Compose f n) where
   rjoin = Compose . fmap rjoin . getCompose
   a `rbind` f = Compose . fmap (`rbind` f) $ getCompose a
 
-instance {-# OVERLAPS #-} (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiModule s t (Compose u (Compose f v))
+instance {-# INCOHERENT #-} (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiModule s t (Compose u (Compose f v))
 
 instance (Monad m) => LeftModule Maybe (MaybeT m) where
   ljoin = join . MaybeT . pure
@@ -338,13 +338,13 @@ instance (Monoid e, Monad m) => BiModule (Either e) (Either e) (ExceptT e m)
 
 -- | @'liftIO'@ is a monad homomorphism, so the proof that every monad with a lawful @'MonadIO'@
 --   instance is a {left,right,bi} module over @'IO'@ is the same as the proof for monad transformers.
-instance {-# OVERLAPS #-} (MonadIO m) => LeftModule IO m where
+instance {-# INCOHERENT #-} (MonadIO m) => LeftModule IO m where
   ljoin = join . liftIO
 
-instance {-# OVERLAPS #-} (MonadIO m) => RightModule IO m where
+instance {-# INCOHERENT #-} (MonadIO m) => RightModule IO m where
   rjoin = (>>= liftIO)
 
-instance {-# OVERLAPS #-} (MonadIO m) => BiModule IO IO m
+instance {-# INCOHERENT #-} (MonadIO m) => BiModule IO IO m
 
 -- | Proof that @f@ is always a left module over @'Codensity' f@:
 --   - @   'ljoin' ('join' m)

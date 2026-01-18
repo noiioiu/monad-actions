@@ -20,6 +20,7 @@ license-file: LICENSE
 author: noiioiu
 maintainer: noiioiu@cocaine.ninja
 category: Control
+homepage: https://codeberg.org/noiioiu/monad-actions
 build-type: Simple
 extra-doc-files: CHANGELOG.md
 

@@ -264,9 +264,10 @@ instance (Eq1 f, Eq1 m, Eq a) => EqProp (FreeT f m a) where
 
 main :: IO ()
 main =
-  print (getCompose rdotest)
-    >> print (runStateT ldotest 'a')
-    >> defaultMain
+  L.do
+    print (getCompose rdotest)
+    print (runStateT ldotest 'a')
+    defaultMain
       ( testGroup "monad action laws" $
           uncurry testProperties
             <$> [ leftmodule @Maybe @[] @Int,
