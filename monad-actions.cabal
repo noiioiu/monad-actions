@@ -25,7 +25,11 @@ build-type: Simple
 extra-doc-files: CHANGELOG.md
 
 common warnings
-  ghc-options: -Werror -Wall
+  ghc-options: -Wall
+
+source-repository head
+  type: git
+  location: ssh://git@codeberg.org/noiioiu/monad-actions.git
 
 library
   import: warnings
@@ -37,12 +41,12 @@ library
   other-modules: Control.Monad.Action.TH
   build-depends:
     base ^>=4.20.0.0,
-    free,
-    kan-extensions,
-    mmorph,
-    mtl,
-    template-haskell,
-    transformers,
+    free ^>=5.2,
+    kan-extensions ^>=5.2,
+    mmorph ^>=1.2.0,
+    mtl ^>=2.3.1,
+    template-haskell >=2.22.0.0 && <2.25,
+    transformers ^>=0.6.3.0,
 
   hs-source-dirs: src
   default-language: GHC2021
