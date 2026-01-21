@@ -302,6 +302,8 @@ main =
                   -- , bimodule @Maybe @[] @[] @Int
                   -- , bimodule @[] @Maybe @[] @Int
                   -- , bimodule @[] @[] @[] @Int
+                  leftmodule @Maybe @(MaybeT Maybe) @Int,
+                  -- leftmodule @[] @(MaybeT (MaybeT [])) @Int, -- this would require undecidable instances
                   leftmodule @Identity @Identity @Int,
                   leftmodule @Maybe @(FreeT Maybe Maybe) @Int,
                   rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char

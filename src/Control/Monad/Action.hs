@@ -295,45 +295,45 @@ instance {-# INCOHERENT #-} (Monad m, Functor f, RightModule m n) => RightModule
 
 instance {-# INCOHERENT #-} (Monad s, Monad t, Functor f, LeftModule s u, RightModule t v) => BiModule s t (Compose u (Compose f v))
 
-instance (Monad m) => LeftModule Maybe (MaybeT m) where
+instance {-# INCOHERENT #-} (Monad m) => LeftModule Maybe (MaybeT m) where
   ljoin = join . MaybeT . pure
 
-instance (Monad m) => RightModule Maybe (MaybeT m) where
+instance {-# INCOHERENT #-} (Monad m) => RightModule Maybe (MaybeT m) where
   rjoin = MaybeT . fmap join . runMaybeT
 
-instance (Monad m) => LeftModule (Either e) (MaybeT m) where
+instance {-# INCOHERENT #-} (Monad m) => LeftModule (Either e) (MaybeT m) where
   ljoin = join . MaybeT . fmap (either (const Nothing) Just) . pure @m
 
-instance (Monad m) => RightModule (Either e) (MaybeT m) where
+instance {-# INCOHERENT #-} (Monad m) => RightModule (Either e) (MaybeT m) where
   rjoin = MaybeT . fmap (either (const Nothing) Just =<<) . runMaybeT
 
-instance (Monoid e, Monad m) => LeftModule Maybe (ExceptT e m) where
+instance {-# INCOHERENT #-} (Monoid e, Monad m) => LeftModule Maybe (ExceptT e m) where
   ljoin = join . ExceptT . pure . maybe (Left mempty) Right
 
-instance (Monoid e, Monad m) => RightModule Maybe (ExceptT e m) where
+instance {-# INCOHERENT #-} (Monoid e, Monad m) => RightModule Maybe (ExceptT e m) where
   rjoin = ExceptT . fmap (maybe (Left mempty) Right =<<) . runExceptT
 
-instance (Monad m) => LeftModule (Either e) (ExceptT e m) where
+instance {-# INCOHERENT #-} (Monad m) => LeftModule (Either e) (ExceptT e m) where
   ljoin = join . ExceptT . pure
 
-instance (Monoid e, Monad m) => RightModule (Either e) (ExceptT e m) where
+instance {-# INCOHERENT #-} (Monoid e, Monad m) => RightModule (Either e) (ExceptT e m) where
   rjoin = ExceptT . fmap join . runExceptT
 
-instance (Monad m) => BiModule Maybe Maybe (MaybeT m)
+instance {-# INCOHERENT #-} (Monad m) => BiModule Maybe Maybe (MaybeT m)
 
-instance (Monad m) => BiModule (Either e) Maybe (MaybeT m)
+instance {-# INCOHERENT #-} (Monad m) => BiModule (Either e) Maybe (MaybeT m)
 
-instance (Monad m) => BiModule Maybe (Either e) (MaybeT m)
+instance {-# INCOHERENT #-} (Monad m) => BiModule Maybe (Either e) (MaybeT m)
 
-instance (Monad m) => BiModule (Either e) (Either f) (MaybeT m)
+instance {-# INCOHERENT #-} (Monad m) => BiModule (Either e) (Either f) (MaybeT m)
 
-instance (Monoid e, Monad m) => BiModule Maybe Maybe (ExceptT e m)
+instance {-# INCOHERENT #-} (Monoid e, Monad m) => BiModule Maybe Maybe (ExceptT e m)
 
-instance (Monoid e, Monad m) => BiModule (Either e) Maybe (ExceptT e m)
+instance {-# INCOHERENT #-} (Monoid e, Monad m) => BiModule (Either e) Maybe (ExceptT e m)
 
-instance (Monoid e, Monad m) => BiModule Maybe (Either e) (ExceptT e m)
+instance {-# INCOHERENT #-} (Monoid e, Monad m) => BiModule Maybe (Either e) (ExceptT e m)
 
-instance (Monoid e, Monad m) => BiModule (Either e) (Either e) (ExceptT e m)
+instance {-# INCOHERENT #-} (Monoid e, Monad m) => BiModule (Either e) (Either e) (ExceptT e m)
 
 -- | @'liftIO'@ is a monad homomorphism, so the proof that every monad with a lawful @'MonadIO'@
 --   instance is a {left,right,bi} module over @'IO'@ is the same as the proof for monad transformers.
