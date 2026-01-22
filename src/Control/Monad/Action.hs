@@ -1,5 +1,4 @@
 {-# LANGUAGE TemplateHaskell #-}
-{-# OPTIONS_GHC -Wno-simplifiable-class-constraints #-}
 
 -- | Given a monad \(M\) on a category \(\mathcal{D}\) with unit \(\eta\) and
 --     multiplication \(\mu\) and a functor \(F\) from \(\mathcal{C}\) to \(\mathcal{D}\),
@@ -41,7 +40,7 @@ import Control.Monad.Morph
 import Control.Monad.Trans ()
 import Control.Monad.Trans.Accum ()
 import Control.Monad.Trans.Compose ()
-import Control.Monad.Trans.Except (ExceptT (..))
+import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import Control.Monad.Trans.Free ()
 import Control.Monad.Trans.Iter ()
 import Control.Monad.Trans.Maybe (MaybeT (..))
