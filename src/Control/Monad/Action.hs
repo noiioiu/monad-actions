@@ -237,6 +237,11 @@ monadTransBiScale = join . join . lift . fmap (fmap lift)
 $mkMonadTransModuleInstances
 $mkIsStackOver
 
+class (IsStackOver m n ~ True) => LiftStack m n where
+  liftStack :: forall a. m a -> n a
+
+$mkLiftStackInstances
+
 instance {-# OVERLAPPING #-} (Monad m) => LeftModule m m where ljoin = join; lbind = (>>=)
 
 instance {-# OVERLAPPING #-} (Monad m) => RightModule m m where rjoin = join; rbind = (>>=)

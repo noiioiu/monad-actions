@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
-module Control.Monad.Action.TH (mkMonadTransModuleInstances, mkIsStackOver) where
+module Control.Monad.Action.TH (mkMonadTransModuleInstances, mkIsStackOver, mkLiftStackInstances) where
 
 import Control.Monad
 import Control.Monad.Trans
@@ -10,24 +10,52 @@ import Language.Haskell.TH
 uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
 uncurry3 f (a, b, c) = f a b c
 
--- type family IsStackOver (m :: Type -> Type) (n :: Type -> Type) :: Bool where
---   IsStackOver m m = True
---   IsStackOver m (ExceptT e n) = IsStackOver m n
---   IsStackOver m (MaybeT n) = IsStackOver m n
---   ...
---   IsStackOver _ _ = False
+infixl 5 #
 
--- class (IsStackOver m n ~ True) => LiftStack m n where
---   liftStack :: forall a. m a -> n a
+(#) :: Type -> Type -> Type
+(#) = AppT
 
--- instance LiftStack m m where
---   liftStack = id
-
--- instance (Monad m, Monad n, LiftStack m n, IsStackOver m (ExceptT e n) ~ True) => LiftStack m (ExceptT e n) where
---   liftStack = lift . liftStack
-
--- instance (Monad m, Monad n, LiftStack m n, IsStackOver m (MaybeT n) ~ True) => LiftStack m (MaybeT n) where
---   liftStack = lift . liftStack
+mkLiftStackInstances :: Q [Dec]
+mkLiftStackInstances =
+  reify ''MonadTrans
+    >>= \case
+      ClassI _ instances ->
+        do
+          m <- newName "m"
+          n <- newName "n"
+          let cName = mkName "LiftStack"
+          -- instance LiftStack m m where
+          --   liftStack = id
+          let baseInstance =
+                InstanceD
+                  Nothing
+                  []
+                  (ConT cName # VarT m # VarT m)
+                  [ValD (VarP $ mkName "liftStack") (NormalB $ VarE 'id) []]
+              inductiveInstances =
+                instances >>= \case
+                  InstanceD _ ct (AppT (ConT _) t) _ ->
+                    -- instance (Monad m, Monad n, LiftStack m n, IsStackOver m (t n) ~ True) => LiftStack m (t n) where
+                    --   liftStack = lift . liftStack
+                    pure $
+                      InstanceD
+                        Nothing
+                        ( [ ConT ''Monad # VarT m,
+                            ConT ''Monad # VarT n,
+                            ConT cName # VarT m # VarT n,
+                            EqualityT # (ConT (mkName "IsStackOver") # VarT m # (t # VarT n)) # PromotedT 'True
+                          ]
+                            ++ ct
+                        )
+                        (ConT cName # VarT m # (t # VarT n))
+                        [ ValD
+                            (VarP $ mkName "liftStack")
+                            (NormalB $ UInfixE (VarE 'lift) (VarE '(.)) (VarE $ mkName "liftStack"))
+                            []
+                        ]
+                  _ -> []
+          pure $ baseInstance : inductiveInstances
+      _ -> pure []
 
 mkIsStackOver :: Q [Dec]
 mkIsStackOver =
@@ -38,9 +66,9 @@ mkIsStackOver =
           m <- newName "m"
           n <- newName "n"
           let fName = mkName "IsStackOver"
-          let mSig = AppT (AppT ArrowT StarT) StarT
+          let mSig = ArrowT # StarT # StarT
               --   IsStackOver m m = True
-              eqCase = TySynEqn Nothing (AppT (AppT (ConT fName) (VarT m)) (VarT m)) (ConT 'True)
+              eqCase = TySynEqn Nothing (ConT fName # VarT m # VarT m) (PromotedT 'True)
               mtCases =
                 instances
                   >>= \case
@@ -49,12 +77,12 @@ mkIsStackOver =
                         --   IsStackOver m (t n) = IsStackOver m n
                         TySynEqn
                           Nothing
-                          (AppT (AppT (ConT fName) (VarT m)) (AppT t $ VarT n))
-                          (AppT (AppT (ConT fName) (VarT m)) (VarT n))
+                          (ConT fName # VarT m # (t # VarT n))
+                          (ConT fName # VarT m # VarT n)
                     _ -> []
 
               --   IsStackOver _ _ = True
-              defCase = TySynEqn Nothing (AppT (AppT (ConT fName) WildCardT) WildCardT) (ConT 'False)
+              defCase = TySynEqn Nothing (ConT fName # WildCardT # WildCardT) (PromotedT 'False)
           pure $
             [ ClosedTypeFamilyD
                 ( TypeFamilyHead
