@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Given a monad \(M\) on a category \(\mathcal{D}\) with unit \(\eta\) and
@@ -237,6 +237,22 @@ monadTransBiScale = join . join . lift . fmap (fmap lift)
 $mkMonadTransModuleInstances
 $mkIsStackOver
 
+-- | All @'LiftStack'@ instances are defined inductively using @'MonadTrans'@.
+--   @'MonadTrans'@ instances are required to satisfy these laws, which state that @'lift'@ is a monad homomorphism:
+--
+--   * @'lift' '.' 'pure' = 'pure'@
+--
+--   * @'lift' (m '>>=' f) = 'lift' m '>>=' ('lift' '.' f)@
+--
+--   Restating the second law in terms of @'join'@:
+--
+--   * @'lift' '.' 'join' = 'join' '.' 'fmap' 'lift' '.' 'lift'@
+--
+--   Because the composition of two monad homomorphisms is a monad homomorphism, @'liftStack'@ also satisfies these laws:
+--
+--   * @'liftStack' '.' 'pure' = 'pure'@
+--
+--   * @'liftStack' '.' 'join' = 'join' '.' 'fmap' 'liftStack' '.' 'liftStack'@
 class (IsStackOver m n ~ True) => LiftStack m n where
   liftStack :: forall a. m a -> n a
 
