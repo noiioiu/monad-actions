@@ -1,4 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
 
 -- | Given a monad \(M\) on a category \(\mathcal{D}\) with unit \(\eta\) and
 --     multiplication \(\mu\) and a functor \(F\) from \(\mathcal{C}\) to \(\mathcal{D}\),
@@ -233,6 +235,7 @@ monadTransBiScale :: (Monad m, MonadTrans t, Monad (t m)) => m (t m (m a)) -> t 
 monadTransBiScale = join . join . lift . fmap (fmap lift)
 
 $mkMonadTransModuleInstances
+$mkIsStackOver
 
 instance {-# OVERLAPPING #-} (Monad m) => LeftModule m m where ljoin = join; lbind = (>>=)
 

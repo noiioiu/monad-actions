@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
 
-module Control.Monad.Action.TH (mkMonadTransModuleInstances) where
+module Control.Monad.Action.TH (mkMonadTransModuleInstances, mkIsStackOver) where
 
 import Control.Monad
 import Control.Monad.Trans
@@ -29,8 +29,8 @@ uncurry3 f (a, b, c) = f a b c
 -- instance (Monad m, Monad n, LiftStack m n, IsStackOver m (MaybeT n) ~ True) => LiftStack m (MaybeT n) where
 --   liftStack = lift . liftStack
 
-mkIsStackover :: Q [Dec]
-mkIsStackover =
+mkIsStackOver :: Q [Dec]
+mkIsStackOver =
   reify ''MonadTrans
     >>= \case
       ClassI _ instances ->
@@ -38,7 +38,7 @@ mkIsStackover =
           m <- newName "m"
           n <- newName "n"
           let fName = mkName "IsStackOver"
-          let mSig = AppT (AppT ArrowT $ ConT ''Type) $ ConT ''Type
+          let mSig = AppT (AppT ArrowT StarT) StarT
               --   IsStackOver m m = True
               eqCase = TySynEqn Nothing (AppT (AppT (ConT fName) (VarT m)) (VarT m)) (ConT 'True)
               mtCases =
