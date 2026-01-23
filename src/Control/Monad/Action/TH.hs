@@ -10,6 +10,63 @@ import Language.Haskell.TH
 uncurry3 :: (a -> b -> c -> d) -> (a, b, c) -> d
 uncurry3 f (a, b, c) = f a b c
 
+-- type family IsStackOver (m :: Type -> Type) (n :: Type -> Type) :: Bool where
+--   IsStackOver m m = True
+--   IsStackOver m (ExceptT e n) = IsStackOver m n
+--   IsStackOver m (MaybeT n) = IsStackOver m n
+--   ...
+--   IsStackOver _ _ = False
+
+-- class (IsStackOver m n ~ True) => LiftStack m n where
+--   liftStack :: forall a. m a -> n a
+
+-- instance LiftStack m m where
+--   liftStack = id
+
+-- instance (Monad m, Monad n, LiftStack m n, IsStackOver m (ExceptT e n) ~ True) => LiftStack m (ExceptT e n) where
+--   liftStack = lift . liftStack
+
+-- instance (Monad m, Monad n, LiftStack m n, IsStackOver m (MaybeT n) ~ True) => LiftStack m (MaybeT n) where
+--   liftStack = lift . liftStack
+
+mkIsStackover :: Q [Dec]
+mkIsStackover =
+  reify ''MonadTrans
+    >>= \case
+      ClassI _ instances ->
+        do
+          m <- newName "m"
+          n <- newName "n"
+          let fName = mkName "IsStackOver"
+          let mSig = AppT (AppT ArrowT $ ConT ''Type) $ ConT ''Type
+              --   IsStackOver m m = True
+              eqCase = TySynEqn Nothing (AppT (AppT (ConT fName) (VarT m)) (VarT m)) (ConT 'True)
+              mtCases =
+                instances
+                  >>= \case
+                    InstanceD _ _ (AppT (ConT _) t) _ ->
+                      pure $
+                        --   IsStackOver m (t n) = IsStackOver m n
+                        TySynEqn
+                          Nothing
+                          (AppT (AppT (ConT fName) (VarT m)) (AppT t $ VarT n))
+                          (AppT (AppT (ConT fName) (VarT m)) (VarT n))
+                    _ -> []
+
+              --   IsStackOver _ _ = True
+              defCase = TySynEqn Nothing (AppT (AppT (ConT fName) WildCardT) WildCardT) (ConT 'False)
+          pure $
+            [ ClosedTypeFamilyD
+                ( TypeFamilyHead
+                    fName
+                    [KindedTV m BndrReq mSig, KindedTV n BndrReq mSig]
+                    (KindSig $ ConT ''Bool)
+                    Nothing
+                )
+                $ eqCase : mtCases ++ [defCase]
+            ]
+      _ -> pure []
+
 mkMonadTransModuleInstances :: Q [Dec]
 mkMonadTransModuleInstances =
   reify ''MonadTrans
