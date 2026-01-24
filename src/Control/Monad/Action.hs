@@ -1,11 +1,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Given a monad \(M\) on a category \(\mathcal{D}\) with unit \(\eta\) and
 --     multiplication \(\mu\) and a functor \(F\) from \(\mathcal{C}\) to \(\mathcal{D}\),
---     a left monad action of \(M\) on \(F\) is a natural transformation \(\nu\) such that
---     the following two laws hold:
+--     a left monad action of \(M\) on \(F\) is a natural transformation \(\nu: M \circ F \to F\)
+--     such that the following two laws hold:
 --
 --     * \(\nu \cdot (\eta \circ F) = \mathrm{id}_F\)
 --     * \(\nu \cdot (\mu \circ F) = \nu \cdot (M \circ \nu)\)
@@ -26,9 +27,6 @@ module Control.Monad.Action
   ( LeftModule (..),
     RightModule (..),
     BiModule (..),
-    monadTransLScale,
-    monadTransRScale,
-    monadTransBiScale,
   )
 where
 
@@ -36,9 +34,12 @@ import Control.Monad (join)
 import Control.Monad.Action.TH
 import Control.Monad.Co ()
 import Control.Monad.Codensity (Codensity (..))
+import Control.Monad.Error.Class (MonadError (..), liftEither)
 import Control.Monad.IO.Class
 import Control.Monad.Identity (Identity (..))
-import Control.Monad.Morph
+import Control.Monad.Reader.Class (MonadReader (..))
+import Control.Monad.State (MonadState (..), State, runState)
+import Control.Monad.State.Class (MonadState, gets)
 import Control.Monad.Trans ()
 import Control.Monad.Trans.Accum ()
 import Control.Monad.Trans.Compose ()
@@ -98,8 +99,7 @@ class (LeftModule r f, RightModule s f) => BiModule r s f where
     f a
   bijoin = rjoin . ljoin
 
--- | Default left scalar multiplication for monad transformers.
---
+-- | All @'LiftStack'@ instances are defined inductively using @'MonadTrans'@.
 --   @'MonadTrans'@ instances are required to satisfy these laws, which state that @'lift'@ is a monad homomorphism:
 --
 --   * @'lift' '.' 'pure' = 'pure'@
@@ -110,11 +110,17 @@ class (LeftModule r f, RightModule s f) => BiModule r s f where
 --
 --   * @'lift' '.' 'join' = 'join' '.' 'fmap' 'lift' '.' 'lift'@
 --
+--   Because the composition of two monad homomorphisms is a monad homomorphism, @'liftStack'@ also satisfies these laws:
+--
+--   * @'liftStack' '.' 'pure' = 'pure'@
+--
+--   * @'liftStack' '.' 'join' = 'join' '.' 'fmap' 'liftStack' '.' 'liftStack'@
+--
 --   The left monad action laws can now be easily proved using string diagrams.
 --   Functors compose from top to bottom, natural transformations from left to right,
 --   @───@ represents @t m@, @┈┈┈@ represents @m@, @├@ represents @'pure'@ or
---   @'join'@ depending on the number of inputs, and @┈┈┈►───@ represents @'lift'@.
---   The @'MonadTrans'@ laws as string diagrams are:
+--   @'join'@ depending on the number of inputs, and @┈┈┈►───@ represents @'liftStack'@.
+--   The @'LiftStack'@ laws as string diagrams are:
 --
 --   > ├┈┈┈►───  = ├──────
 --
@@ -137,7 +143,7 @@ class (LeftModule r f, RightModule s f) => BiModule r s f where
 --   In other words,
 --
 --   @   'ljoin' '.' 'pure'
---   = 'join' '.' 'lift' '.' 'pure'
+--   = 'join' '.' 'liftStack' '.' 'pure'
 --   = 'join' '.' 'pure'
 --   = 'id'@
 --
@@ -152,19 +158,14 @@ class (LeftModule r f, RightModule s f) => BiModule r s f where
 --   In other words,
 --
 --   @  'ljoin' '.' 'join'
---   = 'join' '.' 'lift' '.' 'join'
---   = 'join' '.' 'join' '.' 'fmap' 'lift' '.' 'lift'
---   = 'join' '.' 'fmap' 'join' '.' 'fmap' 'lift' '.' 'lift'
---   = 'join' '.' 'fmap' ('join' '.' 'lift') '.' 'lift'
---   = 'join' '.' 'lift' '.' 'fmap' ('join' '.' 'lift')
+--   = 'join' '.' 'liftStack' '.' 'join'
+--   = 'join' '.' 'join' '.' 'fmap' 'liftStack' '.' 'liftStack'
+--   = 'join' '.' 'fmap' 'join' '.' 'fmap' 'liftStack' '.' 'liftStack'
+--   = 'join' '.' 'fmap' ('join' '.' 'liftStack') '.' 'liftStack'
+--   = 'join' '.' 'liftStack' '.' 'fmap' ('join' '.' 'liftStack')
 --   = 'ljoin' '.' 'fmap' 'ljoin'@
-monadTransLScale :: (Monad m, MonadTrans t, Monad (t m)) => m (t m a) -> t m a
-monadTransLScale = join . lift
-
--- | Default right scalar multiplication for monad transformers.
 --
---   We prove the right module laws using string diagrams, just as in the case
---   of the left module laws.
+--   We can prove the right module laws using string diagrams in the same way.
 --
 --   The diagram for @'rjoin'@ is:
 --
@@ -181,9 +182,9 @@ monadTransLScale = join . lift
 --   In other words,
 --
 --   @   'rjoin' '.' 'fmap' 'pure'
---   = 'join' '.' 'fmap' 'lift' , 'pure'
---   = 'join' '.' 'fmap' 'lift' , 'fmap' 'pure'
---   = 'join' '.' 'fmap' ('lift' , 'pure')
+--   = 'join' '.' 'fmap' 'liftStack' , 'pure'
+--   = 'join' '.' 'fmap' 'liftStack' , 'fmap' 'pure'
+--   = 'join' '.' 'fmap' ('liftStack' , 'pure')
 --   = 'join' '.' 'fmap' 'pure'
 --   = 'id'@
 --
@@ -198,20 +199,15 @@ monadTransLScale = join . lift
 --   In other words,
 --
 --   @  'rjoin' '.' 'fmap' 'join'
---   = 'join' '.' 'fmap' 'lift' '.' 'fmap' 'join'
---   = 'join' '.' 'fmap' ('lift' '.' 'join')
---   = 'join' '.' 'fmap' ('join' '.' 'fmap' 'lift' '.' 'lift')
---   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'lift' '.' 'lift')
---   = 'join' '.' 'join' '.' 'fmap' ('fmap' 'lift') '.' 'fmap' ('lift')
---   = 'join' '.' 'fmap' 'lift' '.' 'join' '.' 'fmap' 'lift'
+--   = 'join' '.' 'fmap' 'liftStack' '.' 'fmap' 'join'
+--   = 'join' '.' 'fmap' ('liftStack' '.' 'join')
+--   = 'join' '.' 'fmap' ('join' '.' 'fmap' 'liftStack' '.' 'liftStack')
+--   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'liftStack' '.' 'liftStack')
+--   = 'join' '.' 'join' '.' 'fmap' ('fmap' 'liftStack') '.' 'fmap' ('liftStack')
+--   = 'join' '.' 'fmap' 'liftStack' '.' 'join' '.' 'fmap' 'liftStack'
 --   = 'rjoin' '.' 'rjoin'@
-monadTransRScale :: (Monad m, MonadTrans t, Monad (t m)) => t m (m a) -> t m a
-monadTransRScale = (lift =<<)
-
--- | Default two-sided scalar multiplication for monad transformers.
 --
---   We prove the bimodule law using string diagrams, just as in the case
---   of the left and right module laws:
+--   The bimodule law can be proved as follows:
 --
 --   > ┈┈┈►─┐             ┈┈►─┐
 --   >      ├───┐             ├───┐          ┈┈┈┈┈┈►─┐
@@ -222,47 +218,29 @@ monadTransRScale = (lift =<<)
 --   In other words,
 --
 --   @  'bijoin'
---   = 'join' '.' 'join' '.' 'lift' '.' 'fmap' ('fmap' 'lift')
---   = 'join' '.' 'fmap' 'lift' '.' 'join' '.' 'lift'
+--   = 'join' '.' 'join' '.' 'liftStack' '.' 'fmap' ('fmap' 'liftStack')
+--   = 'join' '.' 'fmap' 'liftStack' '.' 'join' '.' 'liftStack'
 --   = 'rjoin' '.' 'ljoin'
---   = 'join' '.' 'fmap' 'lift' '.' 'join' '.' 'lift'
---   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'lift') '.' 'lift'
---   = 'join' '.' 'fmap' ('join' '.' 'fmap' 'lift') '.' 'lift'
---   = 'join' '.' 'fmap' 'rjoin' '.' 'lift'
---   = 'join' '.' 'lift' '.' 'fmap' 'rjoin'
+--   = 'join' '.' 'fmap' 'liftStack' '.' 'join' '.' 'liftStack'
+--   = 'join' '.' 'fmap' 'join' '.' 'fmap' ('fmap' 'liftStack') '.' 'liftStack'
+--   = 'join' '.' 'fmap' ('join' '.' 'fmap' 'liftStack') '.' 'liftStack'
+--   = 'join' '.' 'fmap' 'rjoin' '.' 'liftStack'
+--   = 'join' '.' 'liftStack' '.' 'fmap' 'rjoin'
 --   = 'ljoin' '.' 'fmap' 'rjoin'@
-monadTransBiScale :: (Monad m, MonadTrans t, Monad (t m)) => m (t m (m a)) -> t m a
-monadTransBiScale = join . join . lift . fmap (fmap lift)
-
-$mkMonadTransModuleInstances
-$mkIsStackOver
-
--- | All @'LiftStack'@ instances are defined inductively using @'MonadTrans'@.
---   @'MonadTrans'@ instances are required to satisfy these laws, which state that @'lift'@ is a monad homomorphism:
---
---   * @'lift' '.' 'pure' = 'pure'@
---
---   * @'lift' (m '>>=' f) = 'lift' m '>>=' ('lift' '.' f)@
---
---   Restating the second law in terms of @'join'@:
---
---   * @'lift' '.' 'join' = 'join' '.' 'fmap' 'lift' '.' 'lift'@
---
---   Because the composition of two monad homomorphisms is a monad homomorphism, @'liftStack'@ also satisfies these laws:
---
---   * @'liftStack' '.' 'pure' = 'pure'@
---
---   * @'liftStack' '.' 'join' = 'join' '.' 'fmap' 'liftStack' '.' 'liftStack'@
-class (IsStackOver m n ~ True) => LiftStack m n where
+class LiftStack m n where
   liftStack :: forall a. m a -> n a
 
 $mkLiftStackInstances
 
-instance {-# OVERLAPPING #-} (Monad m) => LeftModule m m where ljoin = join; lbind = (>>=)
+instance {-# OVERLAPS #-} (Monad n, Monad m, LiftStack m n) => LeftModule m n where
+  ljoin = join . liftStack
+  lbind = (>>=) . liftStack
 
-instance {-# OVERLAPPING #-} (Monad m) => RightModule m m where rjoin = join; rbind = (>>=)
+instance {-# OVERLAPS #-} (Monad n, Monad m, LiftStack m n) => RightModule m n where
+  rjoin = join . fmap liftStack
+  rbind = flip $ flip (>>=) . (liftStack .)
 
-instance {-# OVERLAPPING #-} (Monad m) => BiModule m m m
+instance {-# OVERLAPS #-} (Monad n, Monad m, LiftStack m n) => BiModule m m n
 
 instance {-# INCOHERENT #-} (Functor f) => LeftModule Identity f where ljoin = runIdentity
 
@@ -270,21 +248,21 @@ instance {-# INCOHERENT #-} (Functor f) => RightModule Identity f where rjoin = 
 
 instance {-# INCOHERENT #-} (Functor f) => BiModule Identity Identity f
 
-instance RightModule Maybe [] where rjoin = catMaybes; rbind = flip mapMaybe
+instance {-# INCOHERENT #-} RightModule Maybe [] where rjoin = catMaybes; rbind = flip mapMaybe
 
-instance LeftModule Maybe [] where ljoin = concat; lbind = flip concatMap
+instance {-# INCOHERENT #-} LeftModule Maybe [] where ljoin = concat; lbind = flip concatMap
 
-instance LeftModule NE.NonEmpty [] where ljoin = concat; lbind = flip concatMap
+instance {-# INCOHERENT #-} LeftModule NE.NonEmpty [] where ljoin = concat; lbind = flip concatMap
 
-instance RightModule NE.NonEmpty [] where rjoin = (>>= NE.toList)
+instance {-# INCOHERENT #-} RightModule NE.NonEmpty [] where rjoin = (>>= NE.toList)
 
-instance BiModule Maybe Maybe []
+instance {-# INCOHERENT #-} BiModule Maybe Maybe []
 
-instance BiModule Maybe [] []
+instance {-# INCOHERENT #-} BiModule Maybe [] []
 
 instance BiModule [] Maybe []
 
-instance BiModule NE.NonEmpty NE.NonEmpty []
+instance {-# INCOHERENT #-} BiModule NE.NonEmpty NE.NonEmpty []
 
 instance BiModule [] NE.NonEmpty []
 
@@ -294,11 +272,11 @@ instance BiModule Maybe NE.NonEmpty []
 
 instance BiModule NE.NonEmpty Maybe []
 
-instance RightModule (Either e) Maybe where
+instance {-# INCOHERENT #-} RightModule (Either e) Maybe where
   rjoin (Just (Right x)) = Just x
   rjoin _ = Nothing
 
-instance LeftModule (Either e) Maybe where
+instance {-# INCOHERENT #-} LeftModule (Either e) Maybe where
   ljoin (Right (Just x)) = Just x
   ljoin _ = Nothing
 
@@ -336,12 +314,6 @@ instance {-# INCOHERENT #-} (Monoid e, Monad m) => LeftModule Maybe (ExceptT e m
 instance {-# INCOHERENT #-} (Monoid e, Monad m) => RightModule Maybe (ExceptT e m) where
   rjoin = ExceptT . fmap (maybe (Left mempty) Right =<<) . runExceptT
 
-instance {-# INCOHERENT #-} (Monad m) => LeftModule (Either e) (ExceptT e m) where
-  ljoin = join . ExceptT . pure
-
-instance {-# INCOHERENT #-} (Monoid e, Monad m) => RightModule (Either e) (ExceptT e m) where
-  rjoin = ExceptT . fmap join . runExceptT
-
 instance {-# INCOHERENT #-} (Monad m) => BiModule Maybe Maybe (MaybeT m)
 
 instance {-# INCOHERENT #-} (Monad m) => BiModule (Either e) Maybe (MaybeT m)
@@ -356,17 +328,51 @@ instance {-# INCOHERENT #-} (Monoid e, Monad m) => BiModule (Either e) Maybe (Ex
 
 instance {-# INCOHERENT #-} (Monoid e, Monad m) => BiModule Maybe (Either e) (ExceptT e m)
 
-instance {-# INCOHERENT #-} (Monoid e, Monad m) => BiModule (Either e) (Either e) (ExceptT e m)
-
 -- | @'liftIO'@ is a monad homomorphism, so the proof that every monad with a lawful @'MonadIO'@
 --   instance is a {left,right,bi} module over @'IO'@ is the same as the proof for monad transformers.
 instance {-# INCOHERENT #-} (MonadIO m) => LeftModule IO m where
   ljoin = join . liftIO
+  a `lbind` f = liftIO a >>= f
 
 instance {-# INCOHERENT #-} (MonadIO m) => RightModule IO m where
   rjoin = (>>= liftIO)
+  a `rbind` f = a >>= (liftIO . f)
 
 instance {-# INCOHERENT #-} (MonadIO m) => BiModule IO IO m
+
+-- | No laws are given in the documentation for @'MonadError'@, but we assume
+--   @'liftEither'@ is a monad homomorphism.
+instance {-# INCOHERENT #-} (MonadError e m) => LeftModule (Either e) m where
+  ljoin = join . liftEither
+  a `lbind` f = liftEither a >>= f
+
+instance {-# INCOHERENT #-} (MonadError e m) => RightModule (Either e) m where
+  rjoin = (>>= liftEither)
+  a `rbind` f = a >>= (liftEither . f)
+
+instance {-# INCOHERENT #-} (MonadError e m) => BiModule (Either e) (Either e) m
+
+-- | For all lawful @'MonadReader'@ instances, @'reader'@ is a monad homomorphism.
+instance {-# INCOHERENT #-} (MonadReader r m) => LeftModule ((->) r) m where
+  ljoin = join . reader
+  a `lbind` f = reader a >>= f
+
+instance {-# INCOHERENT #-} (MonadReader r m) => RightModule ((->) r) m where
+  rjoin = (>>= reader)
+  a `rbind` f = a >>= (reader . f)
+
+instance {-# INCOHERENT #-} (MonadReader r m) => BiModule ((->) r) ((->) r) m
+
+-- | For all lawful @'MonadState'@ instances, @'state'@ is a monad homomorphism.
+instance {-# INCOHERENT #-} (MonadState s m) => LeftModule (State s) m where
+  ljoin = join . state . runState
+  a `lbind` f = state (runState a) >>= f
+
+instance {-# INCOHERENT #-} (MonadState s m) => RightModule (State s) m where
+  rjoin = (>>= (state . runState))
+  a `rbind` f = a >>= (state . runState . f)
+
+instance {-# INCOHERENT #-} (MonadState s m) => BiModule (State s) (State s) m
 
 -- | Proof that @f@ is always a left module over @'Codensity' f@:
 --   - @   'ljoin' ('join' m)

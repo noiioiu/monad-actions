@@ -1,3 +1,5 @@
+{-# LANGUAGE MonoLocalBinds #-}
+
 -- | This module should be imported qualified, and can be used with the @QualifiedDo@ extension.
 module Control.Monad.Action.Right ((>>=), (>>), (=<<), (>=>), (<=<), (<*>), fmap, pure, return, fail, join) where
 
