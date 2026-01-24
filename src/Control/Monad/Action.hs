@@ -38,8 +38,8 @@ import Control.Monad.Error.Class (MonadError (..), liftEither)
 import Control.Monad.IO.Class
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Reader.Class (MonadReader (..))
-import Control.Monad.State (MonadState (..), State, runState)
-import Control.Monad.State.Class (MonadState, gets)
+import Control.Monad.State (State, runState)
+import Control.Monad.State.Class (MonadState (..))
 import Control.Monad.Trans ()
 import Control.Monad.Trans.Accum ()
 import Control.Monad.Trans.Compose ()
@@ -54,9 +54,11 @@ import Control.Monad.Trans.State.Strict qualified as S ()
 import Control.Monad.Trans.Writer.CPS qualified as C ()
 import Control.Monad.Trans.Writer.Lazy qualified as L ()
 import Control.Monad.Trans.Writer.Strict qualified as S ()
+import Control.Monad.Writer.Class (MonadWriter (..))
 import Data.Functor.Compose (Compose (..))
 import Data.List.NonEmpty qualified as NE (NonEmpty, toList)
 import Data.Maybe (catMaybes, mapMaybe)
+import Data.Tuple (swap)
 
 -- | Instances must satisfy the following laws:
 --
@@ -237,8 +239,8 @@ instance {-# OVERLAPS #-} (Monad n, Monad m, LiftStack m n) => LeftModule m n wh
   lbind = (>>=) . liftStack
 
 instance {-# OVERLAPS #-} (Monad n, Monad m, LiftStack m n) => RightModule m n where
-  rjoin = join . fmap liftStack
-  rbind = flip $ flip (>>=) . (liftStack .)
+  rjoin = (liftStack =<<)
+  rbind = flip $ (=<<) . (liftStack .)
 
 instance {-# OVERLAPS #-} (Monad n, Monad m, LiftStack m n) => BiModule m m n
 
@@ -336,7 +338,7 @@ instance {-# INCOHERENT #-} (MonadIO m) => LeftModule IO m where
 
 instance {-# INCOHERENT #-} (MonadIO m) => RightModule IO m where
   rjoin = (>>= liftIO)
-  a `rbind` f = a >>= (liftIO . f)
+  a `rbind` f = a >>= liftIO . f
 
 instance {-# INCOHERENT #-} (MonadIO m) => BiModule IO IO m
 
@@ -348,7 +350,7 @@ instance {-# INCOHERENT #-} (MonadError e m) => LeftModule (Either e) m where
 
 instance {-# INCOHERENT #-} (MonadError e m) => RightModule (Either e) m where
   rjoin = (>>= liftEither)
-  a `rbind` f = a >>= (liftEither . f)
+  a `rbind` f = a >>= liftEither . f
 
 instance {-# INCOHERENT #-} (MonadError e m) => BiModule (Either e) (Either e) m
 
@@ -359,9 +361,20 @@ instance {-# INCOHERENT #-} (MonadReader r m) => LeftModule ((->) r) m where
 
 instance {-# INCOHERENT #-} (MonadReader r m) => RightModule ((->) r) m where
   rjoin = (>>= reader)
-  a `rbind` f = a >>= (reader . f)
+  a `rbind` f = a >>= reader . f
 
 instance {-# INCOHERENT #-} (MonadReader r m) => BiModule ((->) r) ((->) r) m
+
+-- | For all lawful @'MonadWriter'@ instances, @'writer'@ is a monad homomorphism.
+instance {-# INCOHERENT #-} (MonadWriter w m) => LeftModule ((,) w) m where
+  ljoin = join . writer . swap
+  a `lbind` f = writer (swap a) >>= f
+
+instance {-# INCOHERENT #-} (MonadWriter w m) => RightModule ((,) w) m where
+  rjoin = (>>= writer . swap)
+  a `rbind` f = a >>= writer . swap . f
+
+instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule ((,) w) ((,) w) m
 
 -- | For all lawful @'MonadState'@ instances, @'state'@ is a monad homomorphism.
 instance {-# INCOHERENT #-} (MonadState s m) => LeftModule (State s) m where
@@ -370,7 +383,7 @@ instance {-# INCOHERENT #-} (MonadState s m) => LeftModule (State s) m where
 
 instance {-# INCOHERENT #-} (MonadState s m) => RightModule (State s) m where
   rjoin = (>>= (state . runState))
-  a `rbind` f = a >>= (state . runState . f)
+  a `rbind` f = a >>= state . runState . f
 
 instance {-# INCOHERENT #-} (MonadState s m) => BiModule (State s) (State s) m
 
