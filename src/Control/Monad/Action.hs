@@ -47,10 +47,11 @@ import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import Control.Monad.Trans.Free ()
 import Control.Monad.Trans.Iter ()
 import Control.Monad.Trans.Maybe (MaybeT (..))
-import Control.Monad.Trans.Reader ()
+import Control.Monad.Trans.Reader (Reader, runReader)
 import Control.Monad.Trans.Select ()
 import Control.Monad.Trans.State.Lazy qualified as L ()
 import Control.Monad.Trans.State.Strict qualified as S ()
+import Control.Monad.Trans.Writer (Writer, runWriter)
 import Control.Monad.Trans.Writer.CPS qualified as C ()
 import Control.Monad.Trans.Writer.Lazy qualified as L ()
 import Control.Monad.Trans.Writer.Strict qualified as S ()
@@ -365,6 +366,20 @@ instance {-# INCOHERENT #-} (MonadReader r m) => RightModule ((->) r) m where
 
 instance {-# INCOHERENT #-} (MonadReader r m) => BiModule ((->) r) ((->) r) m
 
+instance {-# INCOHERENT #-} (MonadReader r m) => LeftModule (Reader r) m where
+  ljoin = join . reader . runReader
+  a `lbind` f = reader (runReader a) >>= f
+
+instance {-# INCOHERENT #-} (MonadReader r m) => RightModule (Reader r) m where
+  rjoin = (>>= reader . runReader)
+  a `rbind` f = a >>= reader . runReader . f
+
+instance {-# INCOHERENT #-} (MonadReader r m) => BiModule (Reader r) (Reader r) m
+
+instance {-# INCOHERENT #-} (MonadReader r m) => BiModule ((->) r) (Reader r) m
+
+instance {-# INCOHERENT #-} (MonadReader r m) => BiModule (Reader r) ((->) r) m
+
 -- | For all lawful @'MonadWriter'@ instances, @'writer'@ is a monad homomorphism.
 instance {-# INCOHERENT #-} (MonadWriter w m) => LeftModule ((,) w) m where
   ljoin = join . writer . swap
@@ -375,6 +390,20 @@ instance {-# INCOHERENT #-} (MonadWriter w m) => RightModule ((,) w) m where
   a `rbind` f = a >>= writer . swap . f
 
 instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule ((,) w) ((,) w) m
+
+instance {-# INCOHERENT #-} (MonadWriter w m) => LeftModule (Writer w) m where
+  ljoin = join . writer . runWriter
+  a `lbind` f = writer (runWriter a) >>= f
+
+instance {-# INCOHERENT #-} (MonadWriter w m) => RightModule (Writer w) m where
+  rjoin = (>>= writer . runWriter)
+  a `rbind` f = a >>= writer . runWriter . f
+
+instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule (Writer w) (Writer w) m
+
+instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule ((,) w) (Writer w) m
+
+instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule (Writer w) ((,) w) m
 
 -- | For all lawful @'MonadState'@ instances, @'state'@ is a monad homomorphism.
 instance {-# INCOHERENT #-} (MonadState s m) => LeftModule (State s) m where

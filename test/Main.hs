@@ -308,6 +308,9 @@ main =
                   leftmodule @(Either String) @(MaybeT (ExceptT String [])) @Int,
                   leftmodule @Identity @Identity @Int,
                   leftmodule @Maybe @(FreeT Maybe Maybe) @Int,
+                  leftmodule @((,) (Sum Int)) @(MaybeT (WriterT (Sum Int) Maybe)) @Int,
+                  rightmodule @((,) (Sum Int)) @(MaybeT (WriterT (Sum Int) Maybe)) @Int,
+                  bimodule @((,) (Sum Int)) @((,) (Sum Int)) @(MaybeT (WriterT (Sum Int) Maybe)) @Int,
                   rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char
                   -- , rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char
                   -- , rightmodulereader @(Either Bool) @Char @Int
