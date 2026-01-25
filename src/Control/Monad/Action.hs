@@ -27,6 +27,7 @@ module Control.Monad.Action
   ( LeftModule (..),
     RightModule (..),
     BiModule (..),
+    LiftStack (..),
   )
 where
 
@@ -102,16 +103,17 @@ class (LeftModule r f, RightModule s f) => BiModule r s f where
     f a
   bijoin = rjoin . ljoin
 
--- | All @'LiftStack'@ instances are defined inductively using @'MonadTrans'@.
---   @'MonadTrans'@ instances are required to satisfy these laws, which state that @'lift'@ is a monad homomorphism:
+-- | All @'LiftStack'@ instances are defined inductively using @'Control.Monad.Trans.Class.MonadTrans'@.
+--   @'Control.Monad.Trans.Class.MonadTrans'@ instances are required to satisfy these laws, which state
+--   that @'Control.Monad.Trans.Class.lift'@ is a monad homomorphism:
 --
---   * @'lift' '.' 'pure' = 'pure'@
+--   * @'Control.Monad.Trans.Class.lift' '.' 'pure' = 'pure'@
 --
---   * @'lift' (m '>>=' f) = 'lift' m '>>=' ('lift' '.' f)@
+--   * @'Control.Monad.Trans.Class.lift' (m '>>=' f) = 'Control.Monad.Trans.Class.lift' m '>>=' ('Control.Monad.Trans.Class.lift' '.' f)@
 --
 --   Restating the second law in terms of @'join'@:
 --
---   * @'lift' '.' 'join' = 'join' '.' 'fmap' 'lift' '.' 'lift'@
+--   * @'Control.Monad.Trans.Class.lift' '.' 'join' = 'join' '.' 'fmap' 'Control.Monad.Trans.Class.lift' '.' 'Control.Monad.Trans.Class.lift'@
 --
 --   Because the composition of two monad homomorphisms is a monad homomorphism, @'liftStack'@ also satisfies these laws:
 --
