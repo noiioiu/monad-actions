@@ -18,7 +18,7 @@ where
 
 import Control.Monad.Action
 import Control.Monad.Fix qualified as F
-import Prelude hiding (fmap, pure, return, (<*>), (=<<), (>>), (>>=))
+import Prelude hiding (fail, fmap, pure, return, (<*>), (=<<), (>>), (>>=))
 import Prelude qualified as P
 
 infixl 1 >>=
@@ -59,6 +59,10 @@ fmap = P.fmap
 -- | Re-export from "Prelude".
 pure :: (Applicative f) => a -> f a
 pure = P.pure
+
+-- | Re-export from "Prelude".
+fail :: (MonadFail m) => String -> m a
+fail = P.fail
 
 -- | Re-export from "Control.Monad.Fix".
 mfix :: (F.MonadFix m) => (a -> m a) -> m a
