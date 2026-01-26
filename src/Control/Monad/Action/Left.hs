@@ -35,16 +35,19 @@ infixr 1 =<<
 
 infixl 1 >>
 
+-- | Sequencing operator induced by a left monad action.
 (>>) :: (LeftModule m f) => m a -> f b -> f b
 (>>) = (. const) . lbind
 
 infixr 1 >=>
 
+-- | Left to right Kleisli arrow scalar multiplication induced by a left monad action.
 (>=>) :: (LeftModule m f) => (a -> m b) -> (b -> f c) -> a -> f c
 (>=>) = flip $ (.) . (=<<)
 
 infixr 1 <=<
 
+-- | Right to left Kleisli arrow scalar multiplication induced by a left monad action.
 (<=<) :: (LeftModule m f) => (b -> f c) -> (a -> m b) -> a -> f c
 (<=<) = (.) . (=<<)
 
