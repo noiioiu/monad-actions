@@ -173,7 +173,7 @@ leftmodulestate =
     assocP :: m (m (Fun s (m (a, s)))) -> Property
 
     leftP a = ljoin (pure @m (StateT . applyFun <$> a)) =-= (StateT . applyFun <$> a)
-    assocP a = ljoin (join (fmap (StateT . applyFun) <$> a)) =-= ljoin (fmap ljoin (fmap (StateT . applyFun) <$> a))
+    assocP a = ljoin (a >>= fmap (StateT . applyFun)) =-= ljoin (fmap ljoin (fmap (StateT . applyFun) <$> a))
 
 bimodulestate ::
   forall m s a.
