@@ -1,19 +1,37 @@
 {-# LANGUAGE MonoLocalBinds #-}
 
--- | This module should be imported qualified, and can be used with the @QualifiedDo@ extension.
-module Control.Monad.Action.Right ((>>=), (>>), (=<<), (>=>), (<=<), (<*>), fmap, pure, return, fail, join) where
+-- | Operators for right monad actions.
+--   This module should be imported qualified, and can be used with the @QualifiedDo@ extension.
+module Control.Monad.Action.Right
+  ( (>>=),
+    (>>),
+    (=<<),
+    (>=>),
+    (<=<),
+    (<*>),
+    fmap,
+    pure,
+    return,
+    fail,
+    join,
+    mfix,
+  )
+where
 
 import Control.Monad.Action
+import Control.Monad.Fix qualified as F
 import Prelude hiding (fmap, pure, return, (<*>), (=<<), (>>), (>>=))
 import Prelude qualified as P
 
 infixl 1 >>=
 
+-- | @'rbind'@ in operator form.
 (>>=) :: (RightModule m f) => f a -> (a -> m b) -> f b
 (>>=) = rbind
 
 infixr 1 =<<
 
+-- | @'rbind'@ with arguments swapped.
 (=<<) :: (RightModule m f) => (a -> m b) -> f a -> f b
 (=<<) = flip rbind
 
@@ -32,19 +50,28 @@ infixr 1 <=<
 (<=<) :: (RightModule m f) => (b -> m c) -> (a -> f b) -> a -> f c
 (<=<) = (.) . (=<<)
 
-fmap :: (Functor f) => (a -> b) -> f a -> f b
-fmap = P.fmap
-
-pure :: (Applicative f) => a -> f a
-pure = P.pure
-
-return :: (Applicative f) => a -> f a
-return = pure
-
+-- | Alias for @'rjoin'@.
 join :: (RightModule m f) => f (m a) -> f a
 join = rjoin
 
+-- | Re-export from "Prelude".
+fmap :: (Functor f) => (a -> b) -> f a -> f b
+fmap = P.fmap
+
+-- | Re-export from "Prelude".
+pure :: (Applicative f) => a -> f a
+pure = P.pure
+
+-- | Re-export from "Control.Monad.Fix".
+mfix :: (F.MonadFix m) => (a -> m a) -> m a
+mfix = F.mfix
+
+-- | Alias for @'pure'@.
+return :: (Applicative f) => a -> f a
+return = pure
+
 infixl 4 <*>
 
+-- | Used for desugaring qualified @do@ blocks when @ApplicativeDo@ is enabled.
 (<*>) :: (RightModule m f) => f (a -> b) -> m a -> f b
 fs <*> xs = fs >>= flip fmap xs
