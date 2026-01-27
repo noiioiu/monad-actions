@@ -428,6 +428,7 @@ instance {-# INCOHERENT #-} (MonadState s m) => BiModule (State s) (State s) m
 --       = (\k -> 'runCodensity' m (\x -> k ('ljoin' x))) 'id'
 --       = 'ljoin' ('Codensity' (\k -> 'runCodensity' m (\x -> k ('ljoin' x))))
 --       = 'ljoin' ('fmap' 'ljoin' m)@
+-- 
 --   * @'ljoin' ('pure' x) = 'ljoin' ('Codensity' (\x -> k x)) = (\k -> k x) 'id' = x@
 instance (Functor f) => LeftModule (Codensity f) f where
   ljoin c = runCodensity c id
