@@ -357,7 +357,7 @@ instance {-# INCOHERENT #-} (MonadError e m) => RightModule (Either e) m where
 
 instance {-# INCOHERENT #-} (MonadError e m) => BiModule (Either e) (Either e) m
 
--- | For all lawful @'MonadReader'@ instances, @'reader'@ is a monad homomorphism.
+-- | For every @'MonadReader'@ instance defined in "Control.Monad.Reader.Class", @'reader'@ is a monad homomorphism.
 instance {-# INCOHERENT #-} (MonadReader r m) => LeftModule ((->) r) m where
   ljoin = join . reader
   a `lbind` f = reader a >>= f
@@ -382,7 +382,7 @@ instance {-# INCOHERENT #-} (MonadReader r m) => BiModule ((->) r) (Reader r) m
 
 instance {-# INCOHERENT #-} (MonadReader r m) => BiModule (Reader r) ((->) r) m
 
--- | For all lawful @'MonadWriter'@ instances, @'writer'@ is a monad homomorphism.
+-- | For every @'MonadWriter'@ instance defined in "Control.Monad.Writer.Class", @'writer'@ is a monad homomorphism.
 instance {-# INCOHERENT #-} (MonadWriter w m) => LeftModule ((,) w) m where
   ljoin = join . writer . swap
   a `lbind` f = writer (swap a) >>= f
@@ -407,7 +407,7 @@ instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule ((,) w) (Writer w) m
 
 instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule (Writer w) ((,) w) m
 
--- | For all lawful @'MonadState'@ instances, @'state'@ is a monad homomorphism.
+-- | For every @'MonadState'@ instance defined in "Control.Monad.State.Class", @'state'@ is a monad homomorphism.
 instance {-# INCOHERENT #-} (MonadState s m) => LeftModule (State s) m where
   ljoin = join . state . runState
   a `lbind` f = state (runState a) >>= f
