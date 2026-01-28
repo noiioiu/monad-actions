@@ -421,15 +421,15 @@ instance {-# INCOHERENT #-} (MonadState s m) => BiModule (State s) (State s) m
 -- | Proof that @f@ is always a left module over @t'Codensity' f@:
 -- 
 --   * @   'ljoin' ('join' m)
---       = 'ljoin' ('Codensity' (\c -> 'runCodensity' m (\a -> 'runCodensity' a c)))
---       = (\c -> 'runCodensity' m (\a -> 'runCodensity' a c)) id
---       = 'runCodensity' m (\a -> 'runCodensity' a 'id')
---       = 'runCodensity' m 'ljoin' 'runCodensity' m (\x -> 'ljoin' x)
---       = (\k -> 'runCodensity' m (\x -> k ('ljoin' x))) 'id'
---       = 'ljoin' ('Codensity' (\k -> 'runCodensity' m (\x -> k ('ljoin' x))))
+--       = 'ljoin' ('Codensity' (\\c -> 'runCodensity' m (\\a -> 'runCodensity' a c)))
+--       = (\\c -> 'runCodensity' m (\\a -> 'runCodensity' a c)) id
+--       = 'runCodensity' m (\\a -> 'runCodensity' a 'id')
+--       = 'runCodensity' m 'ljoin' 'runCodensity' m (\\x -> 'ljoin' x)
+--       = (\\k -> 'runCodensity' m (\\x -> k ('ljoin' x))) 'id'
+--       = 'ljoin' ('Codensity' (\\k -> 'runCodensity' m (\\x -> k ('ljoin' x))))
 --       = 'ljoin' ('fmap' 'ljoin' m)@
 -- 
---   * @'ljoin' ('pure' x) = 'ljoin' ('Codensity' (\x -> k x)) = (\k -> k x) 'id' = x@
+--   * @'ljoin' ('pure' x) = 'ljoin' ('Codensity' (\\x -> k x)) = (\\k -> k x) 'id' = x@
 instance (Functor f) => LeftModule (Codensity f) f where
   ljoin c = runCodensity c id
   a `lbind` f = runCodensity (f <$> a) id
