@@ -130,7 +130,8 @@ rightmodulestate ::
     Arbitrary s,
     EqProp (m (a, s)),
     Arbitrary (m (m (m a), s)),
-    Show (m (m (m a), s))
+    Show (m (m (m a), s)),
+    LiftStack m (StateT s m)
   ) =>
   TestBatch
 rightmodulestate =
@@ -159,7 +160,8 @@ leftmodulestate ::
     EqProp (m (StateT s m a)),
     Show s,
     Arbitrary s,
-    EqProp (m (a, s))
+    EqProp (m (a, s)),
+    LiftStack m (StateT s m)
   ) =>
   TestBatch
 leftmodulestate =
@@ -185,7 +187,8 @@ bimodulestate ::
     Show (m (Fun s (m (m a, s)))),
     Show s,
     Arbitrary s,
-    EqProp (m (a, s))
+    EqProp (m (a, s)),
+    LiftStack m (StateT s m)
   ) =>
   TestBatch
 bimodulestate =
@@ -216,7 +219,8 @@ rightmodulereader ::
     Show (m (m (m a))),
     Show s,
     Arbitrary s,
-    EqProp (m a)
+    EqProp (m a),
+    LiftStack m (ReaderT s m)
   ) =>
   TestBatch
 rightmodulereader =

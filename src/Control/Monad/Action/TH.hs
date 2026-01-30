@@ -1,9 +1,11 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskellQuotes #-}
+{-# LANGUAGE TypeData #-}
 
-module Control.Monad.Action.TH (mkLiftStackInstances) where
+module Control.Monad.Action.TH (mkLiftBy) where
 
 import Control.Monad.Trans
+import Data.Kind qualified as K
 import Language.Haskell.TH
 
 infixl 5 #
@@ -11,43 +13,62 @@ infixl 5 #
 (#) :: Type -> Type -> Type
 (#) = AppT
 
-mkLiftStackInstances :: Q [Dec]
-mkLiftStackInstances =
+(|->|) :: Type -> Type -> Type
+a |->| b = ArrowT # a # b
+
+mkLiftBy :: Q [Dec]
+mkLiftBy =
   reify ''MonadTrans
     >>= \case
       ClassI _ instances ->
         do
+          decs <-
+            [d|
+              type data Nat = Z | S Nat
+
+              class (Monad m, Monad n) => LiftBy (k :: Nat) (m :: K.Type -> K.Type) (n :: K.Type -> K.Type) | k n -> m where
+                liftBy :: m a -> n a
+
+              instance (Monad m) => LiftBy Z m m where
+                liftBy = id
+              |]
+          let famName = mkName "Steps"
           m <- newName "m"
           n <- newName "n"
-          let cName = mkName "LiftStack"
-          -- instance LiftStack m m where
-          --   liftStack = id
-          let baseInstance =
-                InstanceD
-                  (Just Incoherent)
-                  []
-                  (ConT cName # VarT m # VarT m)
-                  [ValD (VarP $ mkName "liftStack") (NormalB $ VarE 'id) []]
-              inductiveInstances =
+          k <- newName "k"
+          let famDec =
+                ClosedTypeFamilyD
+                  ( TypeFamilyHead
+                      famName
+                      [ KindedTV m BndrReq (StarT |->| StarT),
+                        KindedTV n BndrReq (StarT |->| StarT)
+                      ]
+                      (KindSig . ConT $ mkName "Nat")
+                      Nothing
+                  )
+                  $ TySynEqn Nothing (ConT famName # VarT m # VarT m) (ConT $ mkName "Z")
+                    : ( instances >>= \case
+                          InstanceD _ _ (AppT (ConT _) t) _ ->
+                            [ TySynEqn
+                                Nothing
+                                (ConT famName # VarT m # (t # VarT n))
+                                (ConT (mkName "S") # (ConT famName # VarT m # VarT n))
+                            ]
+                          _ -> []
+                      )
+          let inductiveInstances =
                 instances >>= \case
-                  InstanceD _ ct (AppT (ConT _) t) _ ->
-                    -- instance (Monad m, Monad n, LiftStack m n) => LiftStack m (t n) where
-                    --   liftStack = lift . liftStack
+                  InstanceD ov ct (AppT (ConT _) t) _ ->
                     pure $
                       InstanceD
-                        (Just Incoherent)
-                        ( [ ConT ''Monad # VarT m,
-                            ConT ''Monad # VarT n,
-                            ConT cName # VarT m # VarT n
-                          ]
-                            ++ ct
-                        )
-                        (ConT cName # VarT m # (t # VarT n))
+                        ov
+                        (ct ++ [ConT (mkName "LiftBy") # VarT k # VarT m # VarT n])
+                        (ConT (mkName "LiftBy") # (ConT (mkName "S") # VarT k) # VarT m # (t # VarT n))
                         [ ValD
-                            (VarP $ mkName "liftStack")
-                            (NormalB $ UInfixE (VarE 'lift) (VarE '(.)) (VarE $ mkName "liftStack"))
+                            (VarP $ mkName "liftBy")
+                            (NormalB $ UInfixE (VarE 'lift) (VarE '(.)) (AppTypeE (VarE $ mkName "liftBy") (VarT k)))
                             []
                         ]
                   _ -> []
-          pure $ baseInstance : inductiveInstances
+          pure $ decs ++ famDec : inductiveInstances
       _ -> pure []

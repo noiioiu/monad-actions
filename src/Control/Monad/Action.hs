@@ -1,5 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeData #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -232,10 +235,13 @@ class (LeftModule r f, RightModule s f) => BiModule r s f where
 --   = 'join' '.' 'fmap' 'rjoin' '.' 'liftStack'
 --   = 'join' '.' 'liftStack' '.' 'fmap' 'rjoin'
 --   = 'ljoin' '.' 'fmap' 'rjoin'@
-class LiftStack m n where
+class (Monad m, Monad n) => LiftStack m n where
   liftStack :: forall a. m a -> n a
 
-$mkLiftStackInstances
+$mkLiftBy
+
+instance (Monad m, Monad n, LiftBy (Steps m n) m n) => LiftStack m n where
+  liftStack = liftBy @(Steps m n)
 
 instance {-# OVERLAPS #-} (Monad n, Monad m, LiftStack m n) => LeftModule m n where
   ljoin = join . liftStack
@@ -419,7 +425,7 @@ instance {-# INCOHERENT #-} (MonadState s m) => RightModule (State s) m where
 instance {-# INCOHERENT #-} (MonadState s m) => BiModule (State s) (State s) m
 
 -- | Proof that @f@ is always a left module over @t'Codensity' f@:
--- 
+--
 --   * @   'ljoin' ('join' m)
 --       = 'ljoin' ('Codensity' (\\c -> 'runCodensity' m (\\a -> 'runCodensity' a c)))
 --       = (\\c -> 'runCodensity' m (\\a -> 'runCodensity' a c)) id
@@ -428,7 +434,7 @@ instance {-# INCOHERENT #-} (MonadState s m) => BiModule (State s) (State s) m
 --       = (\\k -> 'runCodensity' m (\\x -> k ('ljoin' x))) 'id'
 --       = 'ljoin' ('Codensity' (\\k -> 'runCodensity' m (\\x -> k ('ljoin' x))))
 --       = 'ljoin' ('fmap' 'ljoin' m)@
--- 
+--
 --   * @'ljoin' ('pure' x) = 'ljoin' ('Codensity' (\\x -> k x)) = (\\k -> k x) 'id' = x@
 instance (Functor f) => LeftModule (Codensity f) f where
   ljoin c = runCodensity c id
