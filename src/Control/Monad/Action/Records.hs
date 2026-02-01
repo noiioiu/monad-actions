@@ -25,6 +25,13 @@ infixr 1 <=<
 
 infixl 4 <*>
 
+-- | Every @'LeftAction'@ @l@ should satisfy the following laws:
+--
+-- * @l.'join' '.' 'Control.Monad.join' = l.'join' '.' 'fmap' l.'join'@
+--
+-- * @l.'join' '.' 'pure' = 'id'@
+--
+-- All of the operators should match the default implementations in "Control.Monad.Action" and "Control.Monad.Left".
 data LeftAction (action :: (Type -> Type) -> (Type -> Type) -> Constraint) where
   LeftAction ::
     { -- | left monad action scalar multiplication
@@ -44,6 +51,13 @@ data LeftAction (action :: (Type -> Type) -> (Type -> Type) -> Constraint) where
     } ->
     LeftAction action
 
+-- | Every @'RightAction'@ @r@ should satisfy the following laws:
+--
+-- * @r.'join' '.' 'fmap' 'Control.Monad.join' = r.'join' '.' r.'join'@
+--
+-- * @r.'join' '.' 'fmap' 'pure' = 'id'@
+--
+-- All of the operators should match the default implementations in "Control.Monad.Action" and "Control.Monad.Right".
 data RightAction (action :: (Type -> Type) -> (Type -> Type) -> Constraint) where
   RightAction ::
     { -- | right monad action scalar multiplication
@@ -70,38 +84,39 @@ data BiAction (action :: (Type -> Type) -> (Type -> Type) -> Constraint) where
     } ->
     BiAction action
 
-transformerStackAction :: BiAction LiftStack
+-- | Two-sided action of any monad @m@ on any monad transformer stack over @m@.
+transformerStackAction :: BiAction MonadTransStack
 transformerStackAction =
   let left =
-        let join :: forall m n a. (LiftStack m n) => m (n a) -> n a
+        let join :: forall m n a. (MonadTransStack m n) => m (n a) -> n a
             join = M.join . liftStack
-            (>>=) :: forall m n a b. (LiftStack m n) => m a -> (a -> n b) -> n b
+            (>>=) :: forall m n a b. (MonadTransStack m n) => m a -> (a -> n b) -> n b
             (>>=) = (P.>>=) . liftStack
-            (=<<) :: forall m n a b. (LiftStack m n) => (a -> n b) -> m a -> n b
+            (=<<) :: forall m n a b. (MonadTransStack m n) => (a -> n b) -> m a -> n b
             (=<<) = flip (>>=)
-            (>=>) :: forall m n a b c. (LiftStack m n) => (a -> m b) -> (b -> n c) -> a -> n c
+            (>=>) :: forall m n a b c. (MonadTransStack m n) => (a -> m b) -> (b -> n c) -> a -> n c
             f >=> g = \x -> f x >>= g
-            (<=<) :: forall m n a b c. (LiftStack m n) => (b -> n c) -> (a -> m b) -> a -> n c
+            (<=<) :: forall m n a b c. (MonadTransStack m n) => (b -> n c) -> (a -> m b) -> a -> n c
             (<=<) = flip (>=>)
-            (>>) :: forall m n a b. (LiftStack m n) => m a -> n b -> n b
+            (>>) :: forall m n a b. (MonadTransStack m n) => m a -> n b -> n b
             a >> b = a >>= const b
-            (<*>) :: forall m n a b. (LiftStack m n) => m (a -> b) -> n a -> n b
+            (<*>) :: forall m n a b. (MonadTransStack m n) => m (a -> b) -> n a -> n b
             (<*>) = (P.<*>) . liftStack
-         in LeftAction {..} :: LeftAction LiftStack
+         in LeftAction {..} :: LeftAction MonadTransStack
       right =
-        let join :: forall m n a. (LiftStack m n) => n (m a) -> n a
+        let join :: forall m n a. (MonadTransStack m n) => n (m a) -> n a
             join = (liftStack M.=<<)
-            (>>=) :: forall m n a b. (LiftStack m n) => n a -> (a -> m b) -> n b
+            (>>=) :: forall m n a b. (MonadTransStack m n) => n a -> (a -> m b) -> n b
             (>>=) = flip (=<<)
-            (=<<) :: forall m n a b. (LiftStack m n) => (a -> m b) -> n a -> n b
+            (=<<) :: forall m n a b. (MonadTransStack m n) => (a -> m b) -> n a -> n b
             (=<<) = (M.=<<) . (liftStack .)
-            (>=>) :: forall m n a b c. (LiftStack m n) => (a -> n b) -> (b -> m c) -> a -> n c
+            (>=>) :: forall m n a b c. (MonadTransStack m n) => (a -> n b) -> (b -> m c) -> a -> n c
             f >=> g = \x -> f x >>= g
-            (<=<) :: forall m n a b c. (LiftStack m n) => (b -> m c) -> (a -> n b) -> a -> n c
+            (<=<) :: forall m n a b c. (MonadTransStack m n) => (b -> m c) -> (a -> n b) -> a -> n c
             (<=<) = flip (>=>)
-            (>>) :: forall m n a b. (LiftStack m n) => n a -> m b -> n b
+            (>>) :: forall m n a b. (MonadTransStack m n) => n a -> m b -> n b
             a >> b = a >>= const b
-            (<*>) :: forall m f a b. (LiftStack m f) => f (a -> b) -> m a -> f b
+            (<*>) :: forall m f a b. (MonadTransStack m f) => f (a -> b) -> m a -> f b
             f <*> x = f P.<*> liftStack x
-         in RightAction {..} :: RightAction LiftStack
+         in RightAction {..} :: RightAction MonadTransStack
    in BiAction {..}

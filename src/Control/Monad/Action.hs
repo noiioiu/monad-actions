@@ -90,15 +90,15 @@ class (LeftModule r f, RightModule s f) => BiModule r s f where
     f a
   bijoin = rjoin . ljoin
 
-instance {-# OVERLAPS #-} (Monad n, Monad m, LiftStack m n) => LeftModule m n where
+instance {-# OVERLAPS #-} (Monad n, Monad m, MonadTransStack m n) => LeftModule m n where
   ljoin = join . liftStack
   lbind = (>>=) . liftStack
 
-instance {-# OVERLAPS #-} (Monad n, Monad m, LiftStack m n) => RightModule m n where
+instance {-# OVERLAPS #-} (Monad n, Monad m, MonadTransStack m n) => RightModule m n where
   rjoin = (liftStack =<<)
   rbind = flip $ (=<<) . (liftStack .)
 
-instance {-# OVERLAPS #-} (Monad n, Monad m, LiftStack m n) => BiModule m m n
+instance {-# OVERLAPS #-} (Monad n, Monad m, MonadTransStack m n) => BiModule m m n
 
 instance {-# INCOHERENT #-} (Functor f) => LeftModule Identity f where ljoin = runIdentity
 
