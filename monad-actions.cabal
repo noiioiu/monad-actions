@@ -38,6 +38,7 @@ library
   import: warnings
   exposed-modules:
     Control.Monad.Action
+    Control.Monad.TransformerStack
     Control.Monad.Action.Left
     Control.Monad.Action.Right
     Control.Monad.Action.Records
@@ -51,8 +52,6 @@ library
    mtl >= 2.3.1 && < 2.4,
    template-haskell >= 2.22.0 && < 2.23,
    transformers >= 0.6.1 && < 0.7,
-
-    
 
   hs-source-dirs: src
   default-language: GHC2021

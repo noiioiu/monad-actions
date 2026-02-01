@@ -21,6 +21,7 @@ import Control.Monad.State
 import Control.Monad.Trans.Compose
 import Control.Monad.Trans.Free (FreeF (..), FreeT (..))
 import Control.Monad.Trans.Maybe
+import Control.Monad.TransformerStack
 import Control.Monad.Writer
 import Data.Functor.Classes (Eq1)
 import Data.Functor.Compose

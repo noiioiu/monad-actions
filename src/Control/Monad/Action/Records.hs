@@ -1,9 +1,17 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
 
 -- | This module should be used with @OverloadedRecordDot@ and/or @RebindableSyntax@ (and @RecordWildCards@).
 module Control.Monad.Action.Records where
 
+import Control.Monad qualified as M (join, (=<<))
+import Control.Monad.TransformerStack
 import Data.Kind (Constraint, Type)
+import Prelude hiding ((<*>), (=<<), (>>), (>>=))
+import Prelude qualified as P hiding ((=<<), (>>))
 
 infixl 1 >>=
 
@@ -54,3 +62,46 @@ data RightAction (action :: (Type -> Type) -> (Type -> Type) -> Constraint) wher
       (<*>) :: forall m f a b. (action m f) => f (a -> b) -> m a -> f b
     } ->
     RightAction action
+
+data BiAction (action :: (Type -> Type) -> (Type -> Type) -> Constraint) where
+  BiAction ::
+    { left :: LeftAction action,
+      right :: RightAction action
+    } ->
+    BiAction action
+
+transformerStackAction :: BiAction LiftStack
+transformerStackAction =
+  let left =
+        let join :: forall m n a. (LiftStack m n) => m (n a) -> n a
+            join = M.join . liftStack
+            (>>=) :: forall m n a b. (LiftStack m n) => m a -> (a -> n b) -> n b
+            (>>=) = (P.>>=) . liftStack
+            (=<<) :: forall m n a b. (LiftStack m n) => (a -> n b) -> m a -> n b
+            (=<<) = flip (>>=)
+            (>=>) :: forall m n a b c. (LiftStack m n) => (a -> m b) -> (b -> n c) -> a -> n c
+            f >=> g = \x -> f x >>= g
+            (<=<) :: forall m n a b c. (LiftStack m n) => (b -> n c) -> (a -> m b) -> a -> n c
+            (<=<) = flip (>=>)
+            (>>) :: forall m n a b. (LiftStack m n) => m a -> n b -> n b
+            a >> b = a >>= const b
+            (<*>) :: forall m n a b. (LiftStack m n) => m (a -> b) -> n a -> n b
+            (<*>) = (P.<*>) . liftStack
+         in LeftAction {..} :: LeftAction LiftStack
+      right =
+        let join :: forall m n a. (LiftStack m n) => n (m a) -> n a
+            join = (liftStack M.=<<)
+            (>>=) :: forall m n a b. (LiftStack m n) => n a -> (a -> m b) -> n b
+            (>>=) = flip (=<<)
+            (=<<) :: forall m n a b. (LiftStack m n) => (a -> m b) -> n a -> n b
+            (=<<) = (M.=<<) . (liftStack .)
+            (>=>) :: forall m n a b c. (LiftStack m n) => (a -> n b) -> (b -> m c) -> a -> n c
+            f >=> g = \x -> f x >>= g
+            (<=<) :: forall m n a b c. (LiftStack m n) => (b -> m c) -> (a -> n b) -> a -> n c
+            (<=<) = flip (>=>)
+            (>>) :: forall m n a b. (LiftStack m n) => n a -> m b -> n b
+            a >> b = a >>= const b
+            (<*>) :: forall m f a b. (LiftStack m f) => f (a -> b) -> m a -> f b
+            f <*> x = f P.<*> liftStack x
+         in RightAction {..} :: RightAction LiftStack
+   in BiAction {..}
