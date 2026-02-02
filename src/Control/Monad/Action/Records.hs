@@ -8,10 +8,20 @@
 -- | This module should be used with @OverloadedRecordDot@ and/or @RebindableSyntax@ (and @RecordWildCards@).
 module Control.Monad.Action.Records where
 
-import Control.Monad qualified as M (join, (=<<))
+import Control.Monad qualified as M (Monad (..), join, (=<<))
+import Control.Monad.Error.Class (MonadError, liftEither)
+import Control.Monad.IO.Class (MonadIO (..))
+import Control.Monad.RWS (MonadRWS, RWS, RWST (..), runRWS)
+import Control.Monad.Reader (MonadReader (..), Reader, ReaderT (..), runReader)
+import Control.Monad.State (MonadState (..), State, StateT (..), runState)
+import Control.Monad.Trans.Writer (WriterT (..))
 import Control.Monad.TransformerStack
+import Control.Monad.Writer (MonadWriter (..), Writer, runWriter)
+import Data.Bifunctor (second)
 import Data.Constraint (Dict (..))
 import Data.Kind (Constraint, Type)
+import Data.List.NonEmpty qualified as NE
+import Data.Maybe (maybeToList)
 import Prelude hiding ((<*>), (=<<), (>>), (>>=))
 import Prelude qualified as P hiding ((=<<), (>>))
 
@@ -136,4 +146,85 @@ instance MonadHomomorphism MonadTransStack where
   mDict = (Dict, Dict)
 
 transformerStackAction :: BiAction MonadTransStack
-transformerStackAction = monadMorphAction @MonadTransStack
+transformerStackAction = monadMorphAction
+
+-- | @m ':<:' n@ means that @m@ is a submonad of @n@. @'inject'@ must be a monic monad homomorphism.
+class (Monad m, Monad n) => m :<: n where
+  inject :: forall a. m a -> n a
+
+instance MonadHomomorphism (:<:) where
+  hom = inject
+  mDict = (Dict, Dict)
+
+submonadAction :: BiAction (:<:)
+submonadAction = monadMorphAction
+
+instance (Monad m) => m :<: m where
+  inject = id
+
+-- | A @'Maybe'@ is just a list of length at most 1.
+instance Maybe :<: [] where
+  inject = maybeToList
+
+-- | A @'Data.List.NonEmpty.NonEmpty'@ is just a list of length at least 1.
+instance NE.NonEmpty :<: [] where
+  inject = NE.toList
+
+-- | @'ReaderT'@ is just read-only @'StateT'@.
+instance (m :<: n) => ReaderT s m :<: StateT s n where
+  inject ReaderT {runReaderT} = StateT $ \s -> inject . fmap (,s) $ runReaderT s
+
+-- | @'WriterT'@ is just append-only @'StateT'@.
+instance (Monoid s, m :<: n) => WriterT s m :<: StateT s n where
+  inject WriterT {runWriterT} = StateT $ \s -> inject @m @n . fmap (second (s <>)) $ runWriterT
+
+-- | @'StateT'@ is just @'RWST'@ that ignores the read-only environment and doesn't append to the output.
+instance (Monoid w, m :<: n) => StateT s m :<: RWST r w s n where
+  inject StateT {runStateT} = RWST $ \_ s -> inject . fmap (\(a, t) -> (a, t, mempty)) $ runStateT s
+
+-- | @'ReaderT'@ is just @'RWST'@ that ignores the state and doesn't append to the output.
+--
+--   Note: @'inject' \@('ReaderT' s m) \@('StateT' s n) '.' 'inject' \@('StateT' s n) \@('RWST' s w s k) =/= 'inject' \@('ReaderT' s m) \@('RWST' s w s k)@
+instance (Monoid w, m :<: n) => ReaderT r m :<: RWST r w s n where
+  inject ReaderT {runReaderT} = RWST $ \r s -> inject . fmap (,s,mempty) $ runReaderT r
+
+-- | @'WriterT'@ is just @'RWST'@ that ignores the environment and state.
+--
+--   Note: @'inject' \@('WriterT' w m) \@('StateT' w n) '.' 'inject' \@('StateT' w n) \@('RWST' r w w k) =/= 'inject' \@('WriterT' w m) \@('RWST' r w w k)@
+instance (Monoid w, m :<: n) => WriterT w m :<: RWST r w s n where
+  inject WriterT {runWriterT} = RWST $ \_ s -> inject @m @n . fmap (\(a, w) -> (a, s, w)) $ runWriterT
+
+-- | @'Embed' m n@ means that @m@ is the canonical monad for a class of which @n@ has an instance. @'embed'@ must be a monad homomorphism.
+class (Monad m, Monad n) => Embed m n where
+  embed :: forall a. m a -> n a
+
+instance MonadHomomorphism Embed where
+  hom = embed
+  mDict = (Dict, Dict)
+
+embeddingAction :: BiAction Embed
+embeddingAction = monadMorphAction
+
+instance (MonadIO m) => Embed IO m where
+  embed = liftIO
+
+instance (MonadState s m) => Embed (State s) m where
+  embed = state . runState
+
+instance (MonadReader r m) => Embed (Reader r) m where
+  embed = reader . runReader
+
+instance (MonadWriter w m) => Embed (Writer w) m where
+  embed = writer . runWriter
+
+instance (MonadRWS r w s m) => Embed (RWS r w s) m where
+  embed t =
+    ask P.>>= \r ->
+      get P.>>= \s ->
+        let (a, s', w) = runRWS t r s
+         in put s'
+              M.>> tell w
+              M.>> pure a
+
+instance (MonadError e m) => Embed (Either e) m where
+  embed = liftEither
