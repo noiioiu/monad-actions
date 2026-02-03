@@ -91,7 +91,7 @@ data RightAction (action :: (Type -> Type) -> (Type -> Type) -> Constraint) wher
 
 -- | Every @'BiAction'@ @b@ should satisfy the following laws:
 --
--- * @b.'right'.'join' '.' b.'left'.'join' = b.'left'.'join' '.' 'fmap' b.'right'.'join'
+-- * @b.'right'.'join' '.' b.'left'.'join' = b.'left'.'join' '.' 'fmap' b.'right'.'join'@
 data BiAction (action :: (Type -> Type) -> (Type -> Type) -> Constraint) where
   BiAction ::
     { left :: LeftAction action,
@@ -99,7 +99,7 @@ data BiAction (action :: (Type -> Type) -> (Type -> Type) -> Constraint) where
     } ->
     BiAction action
 
--- | @'MonadHomomorphism c'@ means that, whenever @c m n@, there is a monad homomorphism @'hom'@ from @m@ to @n@.
+-- | @'MonadHomomorphism' c@ means that, whenever @c m n@, there is a monad homomorphism @'hom'@ from @m@ to @n@.
 class MonadHomomorphism (c :: (Type -> Type) -> (Type -> Type) -> Constraint) where
   hom :: forall m n a. (c m n) => m a -> n a
   mDict :: forall m n. (c m n) => (Dict (Monad m), Dict (Monad n))
