@@ -9,6 +9,7 @@
 module Control.Monad.Action.Records where
 
 import Control.Monad qualified as M (Monad (..), join, (=<<))
+import Control.Monad.Codensity (Codensity (..))
 import Control.Monad.Error.Class (MonadError, liftEither)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.RWS (MonadRWS, RWS, RWST (..), runRWS)
@@ -228,3 +229,36 @@ instance (MonadRWS r w s m) => Embed (RWS r w s) m where
 
 instance (MonadError e m) => Embed (Either e) m where
   embed = liftEither
+
+class CodensityAction m f where
+  codensityJoin :: forall a. m (f a) -> f a
+  codensityBind :: forall a b. m a -> (a -> f b) -> f b
+  codensityApply :: forall a b. m (a -> b) -> f a -> f b
+
+codensityAction :: LeftAction CodensityAction
+codensityAction =
+  let join :: forall m f a. (CodensityAction m f) => m (f a) -> f a
+      join = codensityJoin
+      (>>=) :: forall m f a b. (CodensityAction m f) => m a -> (a -> f b) -> f b
+      (>>=) = codensityBind
+      (=<<) :: forall m f a b. (CodensityAction m f) => (a -> f b) -> m a -> f b
+      (=<<) = flip codensityBind
+      (>=>) :: forall m f a b c. (CodensityAction m f) => (a -> m b) -> (b -> f c) -> a -> f c
+      f >=> g = \x -> f x >>= g
+      (<=<) :: forall m f a b c. (CodensityAction m f) => (b -> f c) -> (a -> m b) -> a -> f c
+      (<=<) = flip (>=>)
+      (>>) :: forall m f a b. (CodensityAction m f) => m a -> f b -> f b
+      a >> b = a >>= const b
+      (<*>) :: forall m f a b. (CodensityAction m f) => m (a -> b) -> f a -> f b
+      (<*>) = codensityApply
+   in LeftAction {..}
+
+instance (Monad m) => CodensityAction m m where
+  codensityJoin = M.join
+  codensityBind = (P.>>=)
+  codensityApply = (P.<*>)
+
+instance (Functor f) => CodensityAction (Codensity f) f where
+  codensityJoin c = runCodensity c id
+  a `codensityBind` f = runCodensity (f P.<$> a) id
+  fs `codensityApply` xs = fs `codensityBind` flip fmap xs
