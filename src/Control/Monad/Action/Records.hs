@@ -20,6 +20,7 @@ import Control.Monad.TransformerStack
 import Control.Monad.Writer (MonadWriter (..), Writer, runWriter)
 import Data.Bifunctor (second)
 import Data.Constraint (Dict (..))
+import Data.Functor.Compose (Compose (..))
 import Data.Kind (Constraint, Type)
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe (maybeToList)
@@ -262,3 +263,37 @@ instance (Functor f) => CodensityAction (Codensity f) f where
   codensityJoin c = runCodensity c id
   a `codensityBind` f = runCodensity (f P.<$> a) id
   fs `codensityApply` xs = fs `codensityBind` flip fmap xs
+
+class (Monad m, Functor f) => LeftCompAction m f where
+  leftCompJoin :: forall a. m (f a) -> f a
+  leftCompBind :: forall a b. m a -> (a -> f b) -> f b
+  leftCompApply :: forall a b. m (a -> b) -> f a -> f b
+
+-- | Left action of any monad @m@ on any composition with @m@ as the leftmost component.
+leftCompAction :: LeftAction LeftCompAction
+leftCompAction =
+  let join :: forall m f a. (LeftCompAction m f) => m (f a) -> f a
+      join = leftCompJoin
+      (>>=) :: forall m f a b. (LeftCompAction m f) => m a -> (a -> f b) -> f b
+      (>>=) = leftCompBind
+      (=<<) :: forall m f a b. (LeftCompAction m f) => (a -> f b) -> m a -> f b
+      (=<<) = flip leftCompBind
+      (>=>) :: forall m f a b c. (LeftCompAction m f) => (a -> m b) -> (b -> f c) -> a -> f c
+      f >=> g = \x -> f x >>= g
+      (<=<) :: forall m f a b c. (LeftCompAction m f) => (b -> f c) -> (a -> m b) -> a -> f c
+      (<=<) = flip (>=>)
+      (>>) :: forall m f a b. (LeftCompAction m f) => m a -> f b -> f b
+      a >> b = a >>= const b
+      (<*>) :: forall m f a b. (LeftCompAction m f) => m (a -> b) -> f a -> f b
+      (<*>) = leftCompApply
+   in LeftAction {..}
+
+instance (Monad m) => LeftCompAction m m where
+  leftCompJoin = M.join
+  leftCompBind = (P.>>=)
+  leftCompApply = (P.<*>)
+
+instance (LeftCompAction m f, Functor g) => LeftCompAction m (Compose f g) where
+  leftCompJoin = Compose . leftCompJoin . fmap getCompose
+  a `leftCompBind` f = Compose $ a `leftCompBind` (getCompose . f)
+  fs `leftCompApply` xs = fs `leftCompBind` flip fmap xs
