@@ -207,6 +207,9 @@ instance MonadHomomorphism Embed where
 embeddingAction :: BiAction Embed
 embeddingAction = monadMorphAction
 
+instance (Monad m) => Embed m m where
+  embed = id
+
 instance (MonadIO m) => Embed IO m where
   embed = liftIO
 
@@ -269,7 +272,7 @@ class (Monad m, Functor f) => LeftCompAction m f where
   leftCompBind :: forall a b. m a -> (a -> f b) -> f b
   leftCompApply :: forall a b. m (a -> b) -> f a -> f b
 
--- | Left action of any monad @m@ on any composition with @m@ as the leftmost component.
+-- | Left action of any monad @m@ on any composition of functors with @m@ as the leftmost component.
 leftCompAction :: LeftAction LeftCompAction
 leftCompAction =
   let join :: forall m f a. (LeftCompAction m f) => m (f a) -> f a
@@ -297,3 +300,37 @@ instance (LeftCompAction m f, Functor g) => LeftCompAction m (Compose f g) where
   leftCompJoin = Compose . leftCompJoin . fmap getCompose
   a `leftCompBind` f = Compose $ a `leftCompBind` (getCompose . f)
   fs `leftCompApply` xs = fs `leftCompBind` flip fmap xs
+
+class (Monad m, Functor f) => RightCompAction m f where
+  rightCompJoin :: forall a. f (m a) -> f a
+  rightCompBind :: forall a b. f a -> (a -> m b) -> f b
+  rightCompApply :: forall a b. f (a -> b) -> m a -> f b
+
+-- | Right action of any monad @m@ on any composition of functors with @m@ as the rightmost component.
+rightCompAction :: RightAction RightCompAction
+rightCompAction =
+  let join :: forall m f a. (RightCompAction m f) => f (m a) -> f a
+      join = rightCompJoin
+      (>>=) :: forall m f a b. (RightCompAction m f) => f a -> (a -> m b) -> f b
+      (>>=) = rightCompBind
+      (=<<) :: forall m f a b. (RightCompAction m f) => (a -> m b) -> f a -> f b
+      (=<<) = flip rightCompBind
+      (>=>) :: forall m f a b c. (RightCompAction m f) => (a -> f b) -> (b -> m c) -> a -> f c
+      f >=> g = \x -> f x >>= g
+      (<=<) :: forall m f a b c. (RightCompAction m f) => (b -> m c) -> (a -> f b) -> a -> f c
+      (<=<) = flip (>=>)
+      (>>) :: forall m f a b. (RightCompAction m f) => f a -> m b -> f b
+      a >> b = a >>= const b
+      (<*>) :: forall m f a b. (RightCompAction m f) => f (a -> b) -> m a -> f b
+      (<*>) = rightCompApply
+   in RightAction {..}
+
+instance (Monad m) => RightCompAction m m where
+  rightCompJoin = M.join
+  rightCompBind = (P.>>=)
+  rightCompApply = (P.<*>)
+
+instance (RightCompAction m f, Functor g) => RightCompAction m (Compose g f) where
+  rightCompJoin = Compose . fmap rightCompJoin . getCompose
+  a `rightCompBind` f = Compose . fmap (`rightCompBind` f) $ getCompose a
+  fs `rightCompApply` xs = fs `rightCompBind` flip fmap xs
