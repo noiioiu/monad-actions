@@ -62,7 +62,7 @@ mkLiftBy =
                     pure $
                       InstanceD
                         ov
-                        (ct ++ [ConT (mkName "LiftBy") # VarT k # VarT m # VarT n])
+                        (ct ++ [ConT (mkName "LiftBy") # VarT k # VarT m # VarT n, ConT ''Monad # (t # VarT n)])
                         (ConT (mkName "LiftBy") # (ConT (mkName "S") # VarT k) # VarT m # (t # VarT n))
                         [ ValD
                             (VarP $ mkName "liftBy")
