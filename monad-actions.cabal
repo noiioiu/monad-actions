@@ -9,7 +9,7 @@ name: monad-actions
 --       | | +----- non-breaking API additions
 --       | | | +--- code changes with no API change
 version: 1.0.0.0
-synopsis: Left or right actions of a monad on a functor
+synopsis: Actions of monads on functors
 description:
   This package defines classes for left and right actions of
   monads on functors.  It also includes modules for using
