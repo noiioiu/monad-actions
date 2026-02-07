@@ -14,7 +14,7 @@
 --     We also say that \(F\) is a left module over \(M\).  In the case
 --     \(\mathcal{C} = \mathcal{D}\), a left monad module is a left monoid module
 --     object in the category of endofunctors on \(\mathcal{C}\).  We may also
---     call \(\alpha\) the scalar multiplication of the module by the monad, by analogy
+--     call \(\nu\) the scalar multiplication of the module by the monad, by analogy
 --     with ring modules, which are monoid module objects in the category of abelian groups
 --     with tensor product as the monoidal product (rings are just monoid objects in this
 --     category).
