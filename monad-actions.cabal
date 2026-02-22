@@ -26,6 +26,7 @@ category:
 homepage: https://codeberg.org/noiioiu/monad-actions
 build-type: Simple
 extra-doc-files: CHANGELOG.md
+                 README.md
 
 common warnings
   ghc-options: -Wall
