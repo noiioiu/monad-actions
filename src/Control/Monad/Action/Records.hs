@@ -4,6 +4,7 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE NoFieldSelectors #-}
 
 -- | This module should be used with @OverloadedRecordDot@ and/or @RebindableSyntax@ (and @RecordWildCards@).
 module Control.Monad.Action.Records where
@@ -25,7 +26,7 @@ import Data.Kind (Constraint, Type)
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe (maybeToList)
 import Prelude hiding ((<*>), (=<<), (>>), (>>=))
-import Prelude qualified as P hiding ((=<<), (>>))
+import Prelude qualified as P
 
 infixl 1 >>=
 
@@ -91,7 +92,7 @@ data RightAction (action :: (Type -> Type) -> (Type -> Type) -> Constraint) wher
     } ->
     RightAction action
 
--- | Every @'BiAction'@ @b@ should satisfy the following laws:
+-- | Every @'BiAction'@ @b@ should satisfy the following laws, in addition to the laws for left and right actions:
 --
 -- * @b.'right'.'join' '.' b.'left'.'join' = b.'left'.'join' '.' 'fmap' b.'right'.'join'@
 data BiAction (action :: (Type -> Type) -> (Type -> Type) -> Constraint) where
@@ -196,34 +197,20 @@ instance (Monoid w, m :<: n) => ReaderT r m :<: RWST r w s n where
 instance (Monoid w, m :<: n) => WriterT w m :<: RWST r w s n where
   inject WriterT {runWriterT} = RWST $ \_ s -> inject @m @n . fmap (\(a, w) -> (a, s, w)) $ runWriterT
 
--- | @'Embed' m n@ means that @m@ is the canonical monad for a class of which @n@ has an instance. @'embed'@ must be a monad homomorphism.
-class (Monad m, Monad n) => Embed m n where
-  embed :: forall a. m a -> n a
+instance (MonadIO m) => IO :<: m where
+  inject = liftIO
 
-instance MonadHomomorphism Embed where
-  hom = embed
-  mDict = (Dict, Dict)
+instance (MonadState s m) => (State s) :<: m where
+  inject = state . runState
 
-embeddingAction :: BiAction Embed
-embeddingAction = monadMorphAction
+instance (MonadReader r m) => (Reader r) :<: m where
+  inject = reader . runReader
 
-instance (Monad m) => Embed m m where
-  embed = id
+instance (MonadWriter w m) => (Writer w) :<: m where
+  inject = writer . runWriter
 
-instance (MonadIO m) => Embed IO m where
-  embed = liftIO
-
-instance (MonadState s m) => Embed (State s) m where
-  embed = state . runState
-
-instance (MonadReader r m) => Embed (Reader r) m where
-  embed = reader . runReader
-
-instance (MonadWriter w m) => Embed (Writer w) m where
-  embed = writer . runWriter
-
-instance (MonadRWS r w s m) => Embed (RWS r w s) m where
-  embed t =
+instance (MonadRWS r w s m) => (RWS r w s) :<: m where
+  inject t =
     ask P.>>= \r ->
       get P.>>= \s ->
         let (a, s', w) = runRWS t r s
@@ -231,8 +218,8 @@ instance (MonadRWS r w s m) => Embed (RWS r w s) m where
               M.>> tell w
               M.>> pure a
 
-instance (MonadError e m) => Embed (Either e) m where
-  embed = liftEither
+instance (MonadError e m) => (Either e) :<: m where
+  inject = liftEither
 
 class CodensityAction m f where
   codensityJoin :: forall a. m (f a) -> f a
@@ -272,7 +259,7 @@ class (Monad m, Functor f) => LeftCompAction m f where
   leftCompBind :: forall a b. m a -> (a -> f b) -> f b
   leftCompApply :: forall a b. m (a -> b) -> f a -> f b
 
--- | Left action of any monad @m@ on any composition of functors with @m@ as the leftmost component.
+-- | Left action of any monad @m@ on any composition of functors with @m@ as the outermost component.
 leftCompAction :: LeftAction LeftCompAction
 leftCompAction =
   let join :: forall m f a. (LeftCompAction m f) => m (f a) -> f a
@@ -306,7 +293,7 @@ class (Monad m, Functor f) => RightCompAction m f where
   rightCompBind :: forall a b. f a -> (a -> m b) -> f b
   rightCompApply :: forall a b. f (a -> b) -> m a -> f b
 
--- | Right action of any monad @m@ on any composition of functors with @m@ as the rightmost component.
+-- | Right action of any monad @m@ on any composition of functors with @m@ as the innermost component.
 rightCompAction :: RightAction RightCompAction
 rightCompAction =
   let join :: forall m f a. (RightCompAction m f) => f (m a) -> f a
