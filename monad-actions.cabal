@@ -53,7 +53,9 @@ library
    mtl >= 2.3.1 && < 2.4,
    template-haskell >= 2.22.0 && < 2.23,
    transformers >= 0.6.1 && < 0.7,
-   constraints
+   constraints >= 0.14.4 && < 0.15,
+
+
 
   hs-source-dirs: src
   default-language: GHC2021
