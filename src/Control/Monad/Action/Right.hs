@@ -20,6 +20,7 @@ where
 
 import Control.Monad.Action
 import Control.Monad.Fix qualified as F
+import GHC.Stack (HasCallStack)
 import Prelude hiding (fail, fmap, pure, return, (<*>), (=<<), (>>), (>>=))
 import Prelude qualified as P
 
@@ -66,7 +67,7 @@ pure :: (Applicative f) => a -> f a
 pure = P.pure
 
 -- | Re-export from "Prelude".
-fail :: (MonadFail m) => String -> m a
+fail :: (HasCallStack, MonadFail m) => String -> m a
 fail = P.fail
 
 -- | Re-export from "Control.Monad.Fix".
