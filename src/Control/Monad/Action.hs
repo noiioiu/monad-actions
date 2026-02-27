@@ -31,6 +31,7 @@ module Control.Monad.Action
 where
 
 import Control.Monad (join)
+import Control.Monad.Accum (MonadAccum (..))
 import Control.Monad.Codensity (Codensity (..))
 import Control.Monad.Error.Class (MonadError (..), liftEither)
 import Control.Monad.IO.Class
@@ -38,6 +39,7 @@ import Control.Monad.Identity (Identity (..))
 import Control.Monad.Reader.Class (MonadReader (..))
 import Control.Monad.State (State, runState)
 import Control.Monad.State.Class (MonadState (..))
+import Control.Monad.Trans.Accum (Accum, runAccum)
 import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Reader (Reader, runReader)
@@ -260,7 +262,7 @@ instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule ((,) w) (Writer w) m
 
 instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule (Writer w) ((,) w) m
 
--- | For every @'MonadState'@ instance defined in "Control.Monad.State.Class", @'state'@ is a monad homomorphism.
+-- | For every @'MonadState'@ instance defined in "Control.Monad.State.Class", @'state' '.' 'runState'@ is a monad homomorphism.
 instance {-# INCOHERENT #-} (MonadState s m) => LeftModule (State s) m where
   ljoin = join . state . runState
   a `lbind` f = state (runState a) >>= f
@@ -270,6 +272,17 @@ instance {-# INCOHERENT #-} (MonadState s m) => RightModule (State s) m where
   a `rbind` f = a >>= state . runState . f
 
 instance {-# INCOHERENT #-} (MonadState s m) => BiModule (State s) (State s) m
+
+-- | For every lawful @'MonadAccum'@ instance, @'accum' '.' 'runAccum'@ is a monad homomorphism.
+instance {-# INCOHERENT #-} (MonadAccum w m) => LeftModule (Accum w) m where
+  ljoin = join . accum . runAccum
+  a `lbind` f = accum (runAccum a) >>= f
+
+instance {-# INCOHERENT #-} (MonadAccum w m) => RightModule (Accum w) m where
+  rjoin = (>>= (accum . runAccum))
+  a `rbind` f = a >>= accum . runAccum . f
+
+instance {-# INCOHERENT #-} (MonadAccum w m) => BiModule (Accum w) (Accum w) m
 
 -- | Proof that @f@ is always a left module over @t'Codensity' f@:
 --

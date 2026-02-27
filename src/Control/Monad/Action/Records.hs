@@ -6,16 +6,23 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NoFieldSelectors #-}
 
+{- HLINT ignore "Use >>=" -}
+{- HLINT ignore "Use =<<" -}
+{- HLINT ignore "Use <=<" -}
+{- HLINT ignore "Use >=>" -}
+
 -- | This module should be used with @OverloadedRecordDot@ and/or @RebindableSyntax@ (and @RecordWildCards@).
 module Control.Monad.Action.Records where
 
 import Control.Monad qualified as M (Monad (..), join, (=<<))
+import Control.Monad.Accum (MonadAccum (..))
 import Control.Monad.Codensity (Codensity (..))
 import Control.Monad.Error.Class (MonadError, liftEither)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.RWS (MonadRWS, RWS, RWST (..), runRWS)
 import Control.Monad.Reader (MonadReader (..), Reader, ReaderT (..), runReader)
 import Control.Monad.State (MonadState (..), State, StateT (..), runState)
+import Control.Monad.Trans.Accum (Accum, runAccum)
 import Control.Monad.Trans.Writer (WriterT (..))
 import Control.Monad.TransformerStack
 import Control.Monad.Writer (MonadWriter (..), Writer, runWriter)
@@ -200,16 +207,19 @@ instance (Monoid w, m :<: n) => WriterT w m :<: RWST r w s n where
 instance (MonadIO m) => IO :<: m where
   inject = liftIO
 
-instance (MonadState s m) => (State s) :<: m where
+instance (MonadState s m) => State s :<: m where
   inject = state . runState
 
-instance (MonadReader r m) => (Reader r) :<: m where
+instance (MonadReader r m) => Reader r :<: m where
   inject = reader . runReader
 
-instance (MonadWriter w m) => (Writer w) :<: m where
+instance (MonadWriter w m) => Writer w :<: m where
   inject = writer . runWriter
 
-instance (MonadRWS r w s m) => (RWS r w s) :<: m where
+instance (MonadAccum w m) => Accum w :<: m where
+  inject = accum . runAccum
+
+instance (MonadRWS r w s m) => RWS r w s :<: m where
   inject t =
     ask P.>>= \r ->
       get P.>>= \s ->
@@ -218,7 +228,7 @@ instance (MonadRWS r w s m) => (RWS r w s) :<: m where
               M.>> tell w
               M.>> pure a
 
-instance (MonadError e m) => (Either e) :<: m where
+instance (MonadError e m) => Either e :<: m where
   inject = liftEither
 
 class CodensityAction m f where
