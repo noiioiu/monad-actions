@@ -65,9 +65,8 @@ eof = L.do
 
 num :: (Read a, Fractional a) => Parser a
 num = R.do
-  sign <- fmap (maybe 1 (\case '-' -> -1; _ -> 1)) . optional $ satisfy (`elem` "+-")
   s <- some (satisfy (`elem` ('.' : ['0' .. '9'])))
-  (sign *) <$> readMaybe s
+  readMaybe s
 
 chainl1 :: (Alternative f, Monad f) => f t -> f (t -> t -> t) -> f t
 chainl1 p o = p >>= rest
@@ -124,24 +123,30 @@ complexExpr :: (RealFloat a, Read a) => Parser (Complex a)
 complexExpr = chainl1 summand addOp
   where
     summand = chainl1 factor multOp
-    factor = chainr1 operand powerOp
+    factor = do
+      sign <- skipSpaces $ fmap (maybe 1 (\case '-' -> -1; _ -> 1)) . optional $ satisfy (`elem` "+-")
+      p <- chainl1 implicitFactor $ many (satisfy isSpace) $> (*)
+      pure $ sign * p
+    implicitFactor = chainr1 operand powerOp
     operand =
       skipSpaces $
-        (*) <$> fmap (:+ 0) num <* many (satisfy isSpace) <*> constant
-          <|> fmap (:+ 0) num
-          <|> func <*> operand
+        fmap (:+ 0) num
+          <|> func <*> factor
           <|> constant
           <|> (char '(' *> complexExpr <* char ')')
 
 toString :: (Num a, Eq a, Show a, Ord a) => Complex a -> String
-toString (0 :+ 0) = "0"
-toString (0 :+ 1) = "i"
-toString (0 :+ (-1)) = "-i"
-toString (0 :+ y) = show y ++ "i"
-toString (x :+ 0) = show x
-toString (x :+ 1) = show x ++ '+' : "i"
-toString (x :+ (-1)) = show x ++ '-' : "i"
-toString (x :+ y) = show x ++ (if y >= 0 then '+' else '-') : show (abs y) ++ "i"
+toString = \case
+  (0 :+ 0) -> "0"
+  (0 :+ 1) -> "i"
+  (0 :+ (-1)) -> "-i"
+  (0 :+ y) -> show' y ++ " i"
+  (x :+ 0) -> show' x
+  (x :+ 1) -> show' x ++ " + i"
+  (x :+ (-1)) -> show' x ++ " - i"
+  (x :+ y) -> show' x ++ (if y >= 0 then " + " else " - ") ++ show' (abs y) ++ " i"
+  where
+    show' = reverse . dropWhile (`elem` "0.") . reverse . show
 
 main :: IO ()
 main = forever $ do
@@ -149,4 +154,4 @@ main = forever $ do
   hFlush stdout
   x <- getLine
   let g = runParser (complexExpr @Double <* eof) x
-  maybe (hPutStrLn stderr "error") (putStrLn . toString) g
+  maybe (hPutStrLn stderr "?") (putStrLn . toString) g
