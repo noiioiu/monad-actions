@@ -2,9 +2,11 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeData #-}
 
-module Control.Monad.Action.TH (mkLiftBy) where
+module Control.Monad.Action.TH (mkLiftBy, mkWriterActions) where
 
+import Control.Monad (join)
 import Control.Monad.Trans
+import Control.Monad.Writer.Class (MonadWriter (..))
 import Data.Kind qualified as K
 import Language.Haskell.TH
 
@@ -15,6 +17,69 @@ infixl 5 #
 
 (|->|) :: Type -> Type -> Type
 a |->| b = ArrowT # a # b
+
+mkWriterActions :: Q [Dec]
+mkWriterActions =
+  reify (mkName "IsWriter")
+    >>= \case
+      ClassI _ instances -> do
+        f <- newName "f"
+        a <- newName "a"
+        g <- newName "g"
+        let leftmoduleDecs =
+              instances >>= \case
+                InstanceD _ ct (AppT (AppT _IsWriter w) m) _ ->
+                  pure $
+                    InstanceD
+                      (Just Incoherent)
+                      ((ConT ''MonadWriter # w # VarT f) : ct)
+                      (ConT (mkName "LeftModule") # m # VarT f)
+                      [ ValD
+                          (VarP $ mkName "ljoin")
+                          (NormalB . UInfixE (VarE 'join) (VarE '(.)) $ UInfixE (VarE 'writer) (VarE '(.)) (VarE $ mkName "runWriter"))
+                          [],
+                        FunD
+                          (mkName "lbind")
+                          [ Clause
+                              [VarP a, VarP g]
+                              (NormalB $ UInfixE (AppE (VarE 'writer) (AppE (VarE $ mkName "runWriter") (VarE a))) (VarE '(>>=)) (VarE g))
+                              []
+                          ]
+                      ]
+                _ -> []
+        let rightmoduleDecs =
+              instances >>= \case
+                InstanceD _ ct (AppT (AppT _IsWriter w) m) _ ->
+                  pure $
+                    InstanceD
+                      (Just Incoherent)
+                      ((ConT ''MonadWriter # w # VarT f) : ct)
+                      (ConT (mkName "RightModule") # m # VarT f)
+                      [ ValD
+                          (VarP $ mkName "rjoin")
+                          (NormalB . InfixE Nothing (VarE '(>>=)) . Just . UInfixE (VarE 'writer) (VarE '(.)) . VarE $ mkName "runWriter")
+                          [],
+                        FunD
+                          (mkName "rbind")
+                          [ Clause
+                              [VarP a, VarP g]
+                              (NormalB $ UInfixE (VarE a) (VarE '(>>=)) $ UInfixE (VarE 'writer) (VarE '(.)) $ UInfixE (VarE $ mkName "runWriter") (VarE '(.)) (VarE g))
+                              []
+                          ]
+                      ]
+                _ -> []
+        let bimoduleDecs =
+              do
+                InstanceD _ ct (AppT (AppT _IsWriter w) m) _ <- instances
+                InstanceD _ ct' (AppT (AppT _IsWriter w') n) _ <- instances
+                pure $
+                  InstanceD
+                    (Just Incoherent)
+                    ((ConT ''MonadWriter # w # VarT f) : (ConT ''MonadWriter # w' # VarT f) : ct ++ ct')
+                    (ConT (mkName "BiModule") # m # n # VarT f)
+                    []
+        pure $ leftmoduleDecs ++ rightmoduleDecs ++ bimoduleDecs
+      _ -> pure []
 
 mkLiftBy :: Q [Dec]
 mkLiftBy =

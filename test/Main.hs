@@ -21,8 +21,10 @@ import Control.Monad.State
 import Control.Monad.Trans.Compose
 import Control.Monad.Trans.Free (FreeF (..), FreeT (..))
 import Control.Monad.Trans.Maybe
+import Control.Monad.Trans.Writer.CPS qualified as CPSWriter
 import Control.Monad.TransformerStack
 import Control.Monad.Writer
+import Control.Monad.Writer.Strict qualified as StrictWriter
 import Data.Functor.Classes (Eq1)
 import Data.Functor.Compose
 import Data.Monoid
@@ -240,8 +242,17 @@ rightmodulereader =
 instance (Arbitrary (m (a, w))) => Arbitrary (WriterT w m a) where
   arbitrary = WriterT <$> arbitrary
 
+instance (Arbitrary (m (a, w))) => Arbitrary (StrictWriter.WriterT w m a) where
+  arbitrary = StrictWriter.WriterT <$> arbitrary
+
+instance (Arbitrary (m (a, w)), Monoid w, Monad m, Arbitrary a, Arbitrary w) => Arbitrary (CPSWriter.WriterT w m a) where
+  arbitrary = writer <$> arbitrary
+
 instance (EqProp (m (a, w))) => EqProp (WriterT w m a) where
   a =-= b = runWriterT a =-= runWriterT b
+
+instance (Show (m (a, w)), Monoid w) => Show (CPSWriter.WriterT w m a) where
+  show a = show $ CPSWriter.runWriterT a
 
 ldotest :: StateT Char [] Int
 ldotest = L.do
@@ -316,6 +327,9 @@ main =
                   leftmodule @((,) (Sum Int)) @(MaybeT (WriterT (Sum Int) Maybe)) @Int,
                   rightmodule @((,) (Sum Int)) @(MaybeT (WriterT (Sum Int) Maybe)) @Int,
                   bimodule @((,) (Sum Int)) @((,) (Sum Int)) @(MaybeT (WriterT (Sum Int) Maybe)) @Int,
+                  bimodule @(Writer (Sum Int)) @(Writer (Sum Int)) @(MaybeT (WriterT (Sum Int) Maybe)) @Int,
+                  bimodule @(Writer (Sum Int)) @(StrictWriter.Writer (Sum Int)) @(MaybeT (WriterT (Sum Int) Maybe)) @Int,
+                  bimodule @(CPSWriter.Writer (Sum Int)) @(Writer (Sum Int)) @(MaybeT (WriterT (Sum Int) Maybe)) @Int,
                   rightmodulestate @(WriterT (Product Int) (Either Double)) @Int @Char
                   -- , rightmodulereader @(WriterT (Product Int) (Either Double)) @Int @Char
                   -- , rightmodulereader @(Either Bool) @Char @Int

@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -32,24 +33,27 @@ where
 
 import Control.Monad (join)
 import Control.Monad.Accum (MonadAccum (..))
+import Control.Monad.Action.TH (mkWriterActions)
 import Control.Monad.Codensity (Codensity (..))
 import Control.Monad.Error.Class (MonadError (..), liftEither)
-import Control.Monad.IO.Class
+import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Reader.Class (MonadReader (..))
 import Control.Monad.State (State, runState)
 import Control.Monad.State.Class (MonadState (..))
+import Control.Monad.State.Strict qualified as StateStrict (State, runState)
 import Control.Monad.Trans.Accum (Accum, runAccum)
 import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import Control.Monad.Trans.Maybe (MaybeT (..))
 import Control.Monad.Trans.Reader (Reader, runReader)
-import Control.Monad.Trans.Writer (Writer, runWriter)
-import Control.Monad.TransformerStack
+import Control.Monad.Trans.Writer (Writer)
+import Control.Monad.TransformerStack (IsWriter (..), MonadTransStack (..))
+import Control.Monad.Writer.CPS qualified as WriterCPS (Writer)
 import Control.Monad.Writer.Class (MonadWriter (..))
+import Control.Monad.Writer.Strict qualified as WriterStrict (Writer)
 import Data.Functor.Compose (Compose (..))
 import Data.List.NonEmpty qualified as NE (NonEmpty, toList)
 import Data.Maybe (catMaybes, mapMaybe)
-import Data.Tuple (swap)
 
 -- | Instances must satisfy the following laws:
 --
@@ -237,30 +241,7 @@ instance {-# INCOHERENT #-} (MonadReader r m) => BiModule ((->) r) (Reader r) m
 
 instance {-# INCOHERENT #-} (MonadReader r m) => BiModule (Reader r) ((->) r) m
 
--- | For every @'MonadWriter'@ instance defined in "Control.Monad.Writer.Class", @'writer'@ is a monad homomorphism.
-instance {-# INCOHERENT #-} (MonadWriter w m) => LeftModule ((,) w) m where
-  ljoin = join . writer . swap
-  a `lbind` f = writer (swap a) >>= f
-
-instance {-# INCOHERENT #-} (MonadWriter w m) => RightModule ((,) w) m where
-  rjoin = (>>= writer . swap)
-  a `rbind` f = a >>= writer . swap . f
-
-instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule ((,) w) ((,) w) m
-
-instance {-# INCOHERENT #-} (MonadWriter w m) => LeftModule (Writer w) m where
-  ljoin = join . writer . runWriter
-  a `lbind` f = writer (runWriter a) >>= f
-
-instance {-# INCOHERENT #-} (MonadWriter w m) => RightModule (Writer w) m where
-  rjoin = (>>= writer . runWriter)
-  a `rbind` f = a >>= writer . runWriter . f
-
-instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule (Writer w) (Writer w) m
-
-instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule ((,) w) (Writer w) m
-
-instance {-# INCOHERENT #-} (MonadWriter w m) => BiModule (Writer w) ((,) w) m
+$(mkWriterActions)
 
 -- | For every @'MonadState'@ instance defined in "Control.Monad.State.Class", @'state' '.' 'runState'@ is a monad homomorphism.
 instance {-# INCOHERENT #-} (MonadState s m) => LeftModule (State s) m where
@@ -271,7 +252,21 @@ instance {-# INCOHERENT #-} (MonadState s m) => RightModule (State s) m where
   rjoin = (>>= (state . runState))
   a `rbind` f = a >>= state . runState . f
 
+instance {-# INCOHERENT #-} (MonadState s m) => LeftModule (StateStrict.State s) m where
+  ljoin = join . state . StateStrict.runState
+  a `lbind` f = state (StateStrict.runState a) >>= f
+
+instance {-# INCOHERENT #-} (MonadState s m) => RightModule (StateStrict.State s) m where
+  rjoin = (>>= (state . StateStrict.runState))
+  a `rbind` f = a >>= state . StateStrict.runState . f
+
 instance {-# INCOHERENT #-} (MonadState s m) => BiModule (State s) (State s) m
+
+instance {-# INCOHERENT #-} (MonadState s m) => BiModule (State s) (StateStrict.State s) m
+
+instance {-# INCOHERENT #-} (MonadState s m) => BiModule (StateStrict.State s) (State s) m
+
+instance {-# INCOHERENT #-} (MonadState s m) => BiModule (StateStrict.State s) (StateStrict.State s) m
 
 -- | For every lawful @'MonadAccum'@ instance, @'accum' '.' 'runAccum'@ is a monad homomorphism.
 instance {-# INCOHERENT #-} (MonadAccum w m) => LeftModule (Accum w) m where

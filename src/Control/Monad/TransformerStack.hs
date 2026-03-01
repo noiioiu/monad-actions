@@ -5,10 +5,24 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Control.Monad.TransformerStack (MonadTransStack (..)) where
+module Control.Monad.TransformerStack
+  ( MonadTransStack (..),
+    IsState (..),
+    IsWriter (..),
+    IsRWS (..),
+  )
+where
 
+import Control.Monad.Accum ()
 import Control.Monad.Action.TH
 import Control.Monad.Co ()
+import Control.Monad.RWS.CPS qualified as CPSRWS (RWS, runRWS)
+import Control.Monad.RWS.Class (MonadRWS)
+import Control.Monad.RWS.Lazy qualified as LazyRWS (RWS, runRWS)
+import Control.Monad.RWS.Strict qualified as StrictRWS (RWS, runRWS)
+import Control.Monad.State.Class (MonadState)
+import Control.Monad.State.Lazy qualified as LazyState (State, runState)
+import Control.Monad.State.Strict qualified as StrictState (State, runState)
 import Control.Monad.Trans ()
 import Control.Monad.Trans.Accum ()
 import Control.Monad.Trans.Compose ()
@@ -28,6 +42,11 @@ import Control.Monad.Trans.Writer ()
 import Control.Monad.Trans.Writer.CPS ()
 import Control.Monad.Trans.Writer.Lazy ()
 import Control.Monad.Trans.Writer.Strict ()
+import Control.Monad.Writer.CPS qualified as CPSWriter (Writer, runWriter)
+import Control.Monad.Writer.Class (MonadWriter)
+import Control.Monad.Writer.Lazy qualified as LazyWriter (Writer, runWriter)
+import Control.Monad.Writer.Strict qualified as StrictWriter (Writer, runWriter)
+import Data.Tuple (swap)
 
 $mkLiftBy
 
@@ -75,7 +94,7 @@ $mkLiftBy
 --   >         ├───  =          ├───  =  ──────
 --   > ────────┘        ────────┘
 --
---   In other words,
+--   Or in Haskell notation:
 --
 --   @   'Control.Monad.Action.ljoin' '.' 'pure'
 --   = 'Control.Monad.join' '.' 'liftStack' '.' 'pure'
@@ -90,7 +109,7 @@ $mkLiftBy
 --   > ────────┘         ────────┘              ├───┘
 --   >                                     ─────┘
 --
---   In other words,
+--   Or in Haskell notation:
 --
 --   @  'Control.Monad.Action.ljoin' '.' 'Control.Monad.join'
 --   = 'Control.Monad.join' '.' 'liftStack' '.' 'Control.Monad.join'
@@ -114,7 +133,7 @@ $mkLiftBy
 --   >         ├───  =          ├───  =  ──────
 --   >   ├┈┈►──┘          ├─────┘
 --
---   In other words,
+--   Or in Haskell notation:
 --
 --   @   'Control.Monad.Action.rjoin' '.' 'fmap' 'pure'
 --   = 'Control.Monad.join' '.' 'fmap' 'liftStack' , 'pure'
@@ -131,7 +150,7 @@ $mkLiftBy
 --   >    ├┈┈►─┘              ├───┘         ┈┈┈┈┈┈┈►─┘
 --   > ┈┈┈┘              ┈┈►──┘
 --
---   In other words,
+--   Or in Haskell notation:
 --
 --   @  'Control.Monad.Action.rjoin' '.' 'fmap' 'Control.Monad.join'
 --   = 'Control.Monad.join' '.' 'fmap' 'liftStack' '.' 'fmap' 'Control.Monad.join'
@@ -150,7 +169,7 @@ $mkLiftBy
 --   > ┈►───────┘         ┈┈┈┈┈┈►─┘              ├───┘
 --   >                                       ┈┈►─┘
 --
---   In other words,
+--   Or in Haskell notation:
 --
 --   @  'Control.Monad.Action.bijoin'
 --   = 'Control.Monad.join' '.' 'Control.Monad.join' '.' 'liftStack' '.' 'fmap' ('fmap' 'liftStack')
@@ -167,3 +186,42 @@ class (LiftBy (Steps m n) m n) => MonadTransStack m n where
 
 instance (LiftBy (Steps m n) m n) => MonadTransStack m n where
   liftStack = liftBy @(Steps m n)
+
+-- | @'IsState' s m@ means that @m@ is an implementation of the state monad, or, in other words, @'state'@ is a monad isomorphism whose inverse is @'runState'@.
+class (MonadState s m) => IsState s m where
+  runState :: forall a. m a -> s -> (a, s)
+
+instance IsState s (LazyState.State s) where
+  runState = LazyState.runState
+
+instance IsState s (StrictState.State s) where
+  runState = StrictState.runState
+
+-- | @'IsWriter' w m@ means that @m@ is an implementation of the writer monad, or, in other words, @'writer'@ is a monad isomorphism whose inverse is @'runWriter'@.
+class (MonadWriter w m) => IsWriter w m where
+  runWriter :: forall a. m a -> (a, w)
+
+instance (Monoid w) => IsWriter w ((,) w) where
+  runWriter = swap
+
+instance (Monoid w) => IsWriter w (LazyWriter.Writer w) where
+  runWriter = LazyWriter.runWriter
+
+instance (Monoid w) => IsWriter w (StrictWriter.Writer w) where
+  runWriter = StrictWriter.runWriter
+
+instance (Monoid w) => IsWriter w (CPSWriter.Writer w) where
+  runWriter = CPSWriter.runWriter
+
+-- | @'IsRWS' r w s m@ means that @m@ is an implementation of the rws monad, or, in other words, @'rws'@ is a monad isomorphism whose inverse is @'runRWS'@.
+class (MonadRWS r w s m) => IsRWS r w s m where
+  runRWS :: forall a. m a -> r -> s -> (a, s, w)
+
+instance (Monoid w) => IsRWS r w s (LazyRWS.RWS r w s) where
+  runRWS = LazyRWS.runRWS
+
+instance (Monoid w) => IsRWS r w s (StrictRWS.RWS r w s) where
+  runRWS = StrictRWS.runRWS
+
+instance (Monoid w) => IsRWS r w s (CPSRWS.RWS r w s) where
+  runRWS = CPSRWS.runRWS
