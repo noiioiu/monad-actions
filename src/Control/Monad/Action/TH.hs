@@ -40,8 +40,8 @@ mkLiftBy =
                 ClosedTypeFamilyD
                   ( TypeFamilyHead
                       famName
-                      [ KindedTV m BndrReq (StarT |->| StarT),
-                        KindedTV n BndrReq (StarT |->| StarT)
+                      [ KindedTV m BndrReq (ConT ''K.Type |->| ConT ''K.Type),
+                        KindedTV n BndrReq (ConT ''K.Type |->| ConT ''K.Type)
                       ]
                       (KindSig . ConT $ mkName "Nat")
                       Nothing
