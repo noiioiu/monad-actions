@@ -146,7 +146,7 @@ toString = \case
   (x :+ (-1)) -> show' x ++ " - i"
   (x :+ y) -> show' x ++ (if y >= 0 then " + " else " - ") ++ show' (abs y) ++ " i"
   where
-    show' = reverse . dropWhile (`elem` "0.") . reverse . show
+    show' x = if '.' `elem` show x then reverse . dropWhile (== '.') . dropWhile (== '0') . reverse $ show x else show x
 
 main :: IO ()
 main = forever $ do
