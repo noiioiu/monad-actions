@@ -75,6 +75,18 @@ executable calculator
         base >= 4.20.2 && < 4.23,
         mtl >= 2.3.1 && < 2.4,
 
+executable calculator-records
+  import: warnings
+  if !flag(examples)
+    buildable: False
+  default-language: GHC2021
+  hs-source-dirs: examples
+  main-is: CalculatorRecords.hs
+  build-depends:
+        monad-actions,
+        base >= 4.20.2 && < 4.23,
+        mtl >= 2.3.1 && < 2.4,
+
 test-suite monad-actions-test
   import: warnings
   default-language: GHC2021
