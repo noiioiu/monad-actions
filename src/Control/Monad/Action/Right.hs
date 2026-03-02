@@ -1,7 +1,16 @@
 {-# LANGUAGE MonoLocalBinds #-}
 
--- | Operators for right monad actions.
---   This module should be imported qualified, and can be used with the @QualifiedDo@ extension.
+-- |
+-- Module      : Control.Monad.Action.Right
+-- Description : operators for right monad actions
+-- Copyright   : © noiioiu
+-- License     : LGPL-2
+-- Maintainer  : noiioiu@cocaine.ninja
+-- Stability   : experimental
+-- Portability : not portable
+--
+-- Operators for right monad actions.
+-- This module should be imported qualified, and can be used with the @QualifiedDo@ extension.
 module Control.Monad.Action.Right
   ( (>>=),
     (>>),

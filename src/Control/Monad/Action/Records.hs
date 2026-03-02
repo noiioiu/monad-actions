@@ -10,7 +10,16 @@
 {- HLINT ignore "Use <=<" -}
 {- HLINT ignore "Use >=>" -}
 
--- | This module should be used with @OverloadedRecordDot@ and/or @RebindableSyntax@ (and @RecordWildCards@).
+-- |
+-- Module      : Control.Monad.Action.Records
+-- Description : monad actions, implemented using records
+-- Copyright   : © noiioiu
+-- License     : LGPL-2
+-- Maintainer  : noiioiu@cocaine.ninja
+-- Stability   : experimental
+-- Portability : not portable
+--
+-- This module should be used with @OverloadedRecordDot@ and/or @RebindableSyntax@ (and @RecordWildCards@).
 module Control.Monad.Action.Records where
 
 import Control.Monad qualified as M (join, (=<<))
@@ -253,6 +262,7 @@ class CodensityAction m f where
   codensityBind :: forall a b. m a -> (a -> f b) -> f b
   codensityApply :: forall a b. m (a -> b) -> f a -> f b
 
+-- | Left action of the codensity monad of any functor @f@ on @f@.
 codensityAction :: LeftAction CodensityAction
 codensityAction =
   let join :: forall m f a. (CodensityAction m f) => m (f a) -> f a
