@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -33,27 +34,29 @@ where
 
 import Control.Monad (join)
 import Control.Monad.Accum (MonadAccum (..))
-import Control.Monad.Action.TH (mkWriterActions)
+import Control.Monad.Action.TH (mkMTLActions, (#))
 import Control.Monad.Codensity (Codensity (..))
 import Control.Monad.Error.Class (MonadError (..), liftEither)
 import Control.Monad.IO.Class (MonadIO (..))
 import Control.Monad.Identity (Identity (..))
+import Control.Monad.RWS.Class (MonadRWS)
 import Control.Monad.Reader.Class (MonadReader (..))
-import Control.Monad.State (State, runState)
+import Control.Monad.State ()
 import Control.Monad.State.Class (MonadState (..))
-import Control.Monad.State.Strict qualified as StateStrict (State, runState)
+import Control.Monad.State.Strict ()
 import Control.Monad.Trans.Accum (Accum, runAccum)
 import Control.Monad.Trans.Except (ExceptT (..), runExceptT)
 import Control.Monad.Trans.Maybe (MaybeT (..))
-import Control.Monad.Trans.Reader (Reader, runReader)
-import Control.Monad.Trans.Writer (Writer)
-import Control.Monad.TransformerStack (IsWriter (..), MonadTransStack (..))
-import Control.Monad.Writer.CPS qualified as WriterCPS (Writer)
+import Control.Monad.Trans.Reader ()
+import Control.Monad.Trans.Writer ()
+import Control.Monad.TransformerStack (IsRWS (..), IsReader (..), IsState (..), IsWriter (..), MonadTransStack (..), rws)
+import Control.Monad.Writer.CPS ()
 import Control.Monad.Writer.Class (MonadWriter (..))
-import Control.Monad.Writer.Strict qualified as WriterStrict (Writer)
+import Control.Monad.Writer.Strict ()
 import Data.Functor.Compose (Compose (..))
 import Data.List.NonEmpty qualified as NE (NonEmpty, toList)
 import Data.Maybe (catMaybes, mapMaybe)
+import Language.Haskell.TH (Exp (..), Type (..))
 
 -- | Instances must satisfy the following laws:
 --
@@ -217,56 +220,15 @@ instance {-# INCOHERENT #-} (MonadError e m) => RightModule (Either e) m where
 instance {-# INCOHERENT #-} (MonadError e m) => BiModule (Either e) (Either e) m
 
 -- | For every @'MonadReader'@ instance defined in "Control.Monad.Reader.Class", @'reader'@ is a monad homomorphism.
-instance {-# INCOHERENT #-} (MonadReader r m) => LeftModule ((->) r) m where
-  ljoin = join . reader
-  a `lbind` f = reader a >>= f
+$(mkMTLActions ''IsReader (VarE 'runReader) (VarE 'reader) (\case AppT _ r -> ConT ''MonadReader # r; _ -> TupleT 0))
 
-instance {-# INCOHERENT #-} (MonadReader r m) => RightModule ((->) r) m where
-  rjoin = (>>= reader)
-  a `rbind` f = a >>= reader . f
-
-instance {-# INCOHERENT #-} (MonadReader r m) => BiModule ((->) r) ((->) r) m
-
-instance {-# INCOHERENT #-} (MonadReader r m) => LeftModule (Reader r) m where
-  ljoin = join . reader . runReader
-  a `lbind` f = reader (runReader a) >>= f
-
-instance {-# INCOHERENT #-} (MonadReader r m) => RightModule (Reader r) m where
-  rjoin = (>>= reader . runReader)
-  a `rbind` f = a >>= reader . runReader . f
-
-instance {-# INCOHERENT #-} (MonadReader r m) => BiModule (Reader r) (Reader r) m
-
-instance {-# INCOHERENT #-} (MonadReader r m) => BiModule ((->) r) (Reader r) m
-
-instance {-# INCOHERENT #-} (MonadReader r m) => BiModule (Reader r) ((->) r) m
-
-$(mkWriterActions)
+-- | For every @'MonadWriter'@ instance defined in "Control.Monad.Writer.Class", @'writer' '.' 'runWriter'@ is a monad homomorphism.
+$(mkMTLActions ''IsWriter (VarE 'runWriter) (VarE 'writer) (\case AppT _ w -> ConT ''MonadWriter # w; _ -> TupleT 0))
 
 -- | For every @'MonadState'@ instance defined in "Control.Monad.State.Class", @'state' '.' 'runState'@ is a monad homomorphism.
-instance {-# INCOHERENT #-} (MonadState s m) => LeftModule (State s) m where
-  ljoin = join . state . runState
-  a `lbind` f = state (runState a) >>= f
+$(mkMTLActions ''IsState (VarE 'runState) (VarE 'state) (\case AppT _ s -> ConT ''MonadState # s; _ -> TupleT 0))
 
-instance {-# INCOHERENT #-} (MonadState s m) => RightModule (State s) m where
-  rjoin = (>>= (state . runState))
-  a `rbind` f = a >>= state . runState . f
-
-instance {-# INCOHERENT #-} (MonadState s m) => LeftModule (StateStrict.State s) m where
-  ljoin = join . state . StateStrict.runState
-  a `lbind` f = state (StateStrict.runState a) >>= f
-
-instance {-# INCOHERENT #-} (MonadState s m) => RightModule (StateStrict.State s) m where
-  rjoin = (>>= (state . StateStrict.runState))
-  a `rbind` f = a >>= state . StateStrict.runState . f
-
-instance {-# INCOHERENT #-} (MonadState s m) => BiModule (State s) (State s) m
-
-instance {-# INCOHERENT #-} (MonadState s m) => BiModule (State s) (StateStrict.State s) m
-
-instance {-# INCOHERENT #-} (MonadState s m) => BiModule (StateStrict.State s) (State s) m
-
-instance {-# INCOHERENT #-} (MonadState s m) => BiModule (StateStrict.State s) (StateStrict.State s) m
+$(mkMTLActions ''IsRWS (VarE 'runRWS) (VarE 'rws) (\case AppT (AppT (AppT _ r) w) s -> ConT ''MonadRWS # r # w # s; _ -> TupleT 0))
 
 -- | For every lawful @'MonadAccum'@ instance, @'accum' '.' 'runAccum'@ is a monad homomorphism.
 instance {-# INCOHERENT #-} (MonadAccum w m) => LeftModule (Accum w) m where

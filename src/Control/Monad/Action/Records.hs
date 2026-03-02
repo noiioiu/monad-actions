@@ -4,7 +4,6 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE NoFieldSelectors #-}
 
 {- HLINT ignore "Use >>=" -}
 {- HLINT ignore "Use =<<" -}
@@ -14,23 +13,23 @@
 -- | This module should be used with @OverloadedRecordDot@ and/or @RebindableSyntax@ (and @RecordWildCards@).
 module Control.Monad.Action.Records where
 
-import Control.Monad qualified as M (Monad (..), join, (=<<))
+import Control.Monad qualified as M (join, (=<<))
 import Control.Monad.Accum (MonadAccum (..))
 import Control.Monad.Codensity (Codensity (..))
 import Control.Monad.Error.Class (MonadError, liftEither)
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.RWS (MonadRWS, RWS, RWST (..), runRWS)
-import Control.Monad.RWS.CPS qualified as RWSCPS (RWS, runRWS)
-import Control.Monad.RWS.Strict qualified as RWSStrict (RWS, runRWS)
+import Control.Monad.RWS (MonadRWS, RWS, RWST (..))
+import Control.Monad.RWS.CPS qualified as RWSCPS (RWS)
+import Control.Monad.RWS.Strict qualified as RWSStrict (RWS)
 import Control.Monad.Reader (MonadReader (..), Reader, ReaderT (..), runReader)
-import Control.Monad.State (MonadState (..), State, StateT (..), runState)
-import Control.Monad.State.Strict qualified as StateStrict (State, runState)
+import Control.Monad.State (MonadState (..), State, StateT (..))
+import Control.Monad.State.Strict qualified as StateStrict (State)
 import Control.Monad.Trans.Accum (Accum, runAccum)
 import Control.Monad.Trans.Writer (WriterT (..))
-import Control.Monad.TransformerStack (MonadTransStack (..))
-import Control.Monad.Writer (MonadWriter (..), Writer, runWriter)
-import Control.Monad.Writer.CPS qualified as WriterCPS (Writer, runWriter)
-import Control.Monad.Writer.Strict qualified as WriterStrict (Writer, runWriter)
+import Control.Monad.TransformerStack (IsRWS (..), IsState (..), IsWriter (..), MonadTransStack (..), rws)
+import Control.Monad.Writer (MonadWriter (..), Writer)
+import Control.Monad.Writer.CPS qualified as WriterCPS (Writer)
+import Control.Monad.Writer.Strict qualified as WriterStrict (Writer)
 import Data.Bifunctor (second)
 import Data.Constraint (Dict (..))
 import Data.Functor.Compose (Compose (..))
@@ -217,7 +216,7 @@ instance (MonadState s m) => State s :<: m where
   inject = state . runState
 
 instance (MonadState s m) => StateStrict.State s :<: m where
-  inject = state . StateStrict.runState
+  inject = state . runState
 
 instance (MonadReader r m) => Reader r :<: m where
   inject = reader . runReader
@@ -229,40 +228,22 @@ instance (MonadWriter w m) => Writer w :<: m where
   inject = writer . runWriter
 
 instance (MonadWriter w m) => WriterCPS.Writer w :<: m where
-  inject = writer . WriterCPS.runWriter
+  inject = writer . runWriter
 
 instance (MonadWriter w m) => WriterStrict.Writer w :<: m where
-  inject = writer . WriterStrict.runWriter
+  inject = writer . runWriter
 
 instance (MonadAccum w m) => Accum w :<: m where
   inject = accum . runAccum
 
 instance (MonadRWS r w s m) => RWS r w s :<: m where
-  inject t =
-    ask P.>>= \r ->
-      get P.>>= \s ->
-        let (a, s', w) = runRWS t r s
-         in put s'
-              M.>> tell w
-              M.>> pure a
+  inject = rws . runRWS
 
 instance (MonadRWS r w s m) => RWSCPS.RWS r w s :<: m where
-  inject t =
-    ask P.>>= \r ->
-      get P.>>= \s ->
-        let (a, s', w) = RWSCPS.runRWS t r s
-         in put s'
-              M.>> tell w
-              M.>> pure a
+  inject = rws . runRWS
 
 instance (MonadRWS r w s m) => RWSStrict.RWS r w s :<: m where
-  inject t =
-    ask P.>>= \r ->
-      get P.>>= \s ->
-        let (a, s', w) = RWSStrict.runRWS t r s
-         in put s'
-              M.>> tell w
-              M.>> pure a
+  inject = rws . runRWS
 
 instance (MonadError e m) => Either e :<: m where
   inject = liftEither

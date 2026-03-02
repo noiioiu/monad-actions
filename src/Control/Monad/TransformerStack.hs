@@ -10,6 +10,8 @@ module Control.Monad.TransformerStack
     IsState (..),
     IsWriter (..),
     IsRWS (..),
+    IsReader (..),
+    rws,
   )
 where
 
@@ -17,10 +19,11 @@ import Control.Monad.Accum ()
 import Control.Monad.Action.TH
 import Control.Monad.Co ()
 import Control.Monad.RWS.CPS qualified as CPSRWS (RWS, runRWS)
-import Control.Monad.RWS.Class (MonadRWS)
+import Control.Monad.RWS.Class (MonadRWS, MonadReader (..), MonadWriter (..))
 import Control.Monad.RWS.Lazy qualified as LazyRWS (RWS, runRWS)
 import Control.Monad.RWS.Strict qualified as StrictRWS (RWS, runRWS)
-import Control.Monad.State.Class (MonadState)
+import Control.Monad.Reader qualified as Reader
+import Control.Monad.State.Class (MonadState (..))
 import Control.Monad.State.Lazy qualified as LazyState (State, runState)
 import Control.Monad.State.Strict qualified as StrictState (State, runState)
 import Control.Monad.Trans ()
@@ -43,7 +46,7 @@ import Control.Monad.Trans.Writer.CPS ()
 import Control.Monad.Trans.Writer.Lazy ()
 import Control.Monad.Trans.Writer.Strict ()
 import Control.Monad.Writer.CPS qualified as CPSWriter (Writer, runWriter)
-import Control.Monad.Writer.Class (MonadWriter)
+import Control.Monad.Writer.Class ()
 import Control.Monad.Writer.Lazy qualified as LazyWriter (Writer, runWriter)
 import Control.Monad.Writer.Strict qualified as StrictWriter (Writer, runWriter)
 import Data.Tuple (swap)
@@ -187,6 +190,16 @@ class (LiftBy (Steps m n) m n) => MonadTransStack m n where
 instance (LiftBy (Steps m n) m n) => MonadTransStack m n where
   liftStack = liftBy @(Steps m n)
 
+-- | @'IsReader' r m@ means that @m@ is an implementation of the reader monad, or, in other words, @'reader'@ is a monad isomorphism whose inverse is @'runReader'@.
+class (MonadReader r m) => IsReader r m where
+  runReader :: forall a. m a -> r -> a
+
+instance IsReader r ((->) r) where
+  runReader = id
+
+instance IsReader r (Reader.Reader r) where
+  runReader = Reader.runReader
+
 -- | @'IsState' s m@ means that @m@ is an implementation of the state monad, or, in other words, @'state'@ is a monad isomorphism whose inverse is @'runState'@.
 class (MonadState s m) => IsState s m where
   runState :: forall a. m a -> s -> (a, s)
@@ -225,3 +238,12 @@ instance (Monoid w) => IsRWS r w s (StrictRWS.RWS r w s) where
 
 instance (Monoid w) => IsRWS r w s (CPSRWS.RWS r w s) where
   runRWS = CPSRWS.runRWS
+
+rws :: (MonadRWS r w s m) => (r -> s -> (a, s, w)) -> m a
+rws f =
+  ask >>= \r ->
+    get >>= \s ->
+      let (a, s', w) = f r s
+       in put s'
+            >> tell w
+            >> pure a

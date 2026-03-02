@@ -2,11 +2,10 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeData #-}
 
-module Control.Monad.Action.TH (mkLiftBy, mkWriterActions) where
+module Control.Monad.Action.TH (mkLiftBy, mkMTLActions, (#)) where
 
 import Control.Monad (join)
 import Control.Monad.Trans
-import Control.Monad.Writer.Class (MonadWriter (..))
 import Data.Kind qualified as K
 import Language.Haskell.TH
 
@@ -18,9 +17,9 @@ infixl 5 #
 (|->|) :: Type -> Type -> Type
 a |->| b = ArrowT # a # b
 
-mkWriterActions :: Q [Dec]
-mkWriterActions =
-  reify (mkName "IsWriter")
+mkMTLActions :: Name -> Exp -> Exp -> (Type -> Type) -> Q [Dec]
+mkMTLActions className run inj classToMTLClass =
+  reify className
     >>= \case
       ClassI _ instances -> do
         f <- newName "f"
@@ -28,54 +27,54 @@ mkWriterActions =
         g <- newName "g"
         let leftmoduleDecs =
               instances >>= \case
-                InstanceD _ ct (AppT (AppT _IsWriter w) m) _ ->
+                InstanceD _ ct (AppT cls m) _ ->
                   pure $
                     InstanceD
                       (Just Incoherent)
-                      ((ConT ''MonadWriter # w # VarT f) : ct)
+                      ((classToMTLClass cls # VarT f) : ct)
                       (ConT (mkName "LeftModule") # m # VarT f)
                       [ ValD
                           (VarP $ mkName "ljoin")
-                          (NormalB . UInfixE (VarE 'join) (VarE '(.)) $ UInfixE (VarE 'writer) (VarE '(.)) (VarE $ mkName "runWriter"))
+                          (NormalB . UInfixE (VarE 'join) (VarE '(.)) $ UInfixE inj (VarE '(.)) run)
                           [],
                         FunD
                           (mkName "lbind")
                           [ Clause
                               [VarP a, VarP g]
-                              (NormalB $ UInfixE (AppE (VarE 'writer) (AppE (VarE $ mkName "runWriter") (VarE a))) (VarE '(>>=)) (VarE g))
+                              (NormalB $ UInfixE (AppE inj (AppE run (VarE a))) (VarE '(>>=)) (VarE g))
                               []
                           ]
                       ]
                 _ -> []
         let rightmoduleDecs =
               instances >>= \case
-                InstanceD _ ct (AppT (AppT _IsWriter w) m) _ ->
+                InstanceD _ ct (AppT cls m) _ ->
                   pure $
                     InstanceD
                       (Just Incoherent)
-                      ((ConT ''MonadWriter # w # VarT f) : ct)
+                      ((classToMTLClass cls # VarT f) : ct)
                       (ConT (mkName "RightModule") # m # VarT f)
                       [ ValD
                           (VarP $ mkName "rjoin")
-                          (NormalB . InfixE Nothing (VarE '(>>=)) . Just . UInfixE (VarE 'writer) (VarE '(.)) . VarE $ mkName "runWriter")
+                          (NormalB . InfixE Nothing (VarE '(>>=)) . Just . UInfixE inj (VarE '(.)) $ run)
                           [],
                         FunD
                           (mkName "rbind")
                           [ Clause
                               [VarP a, VarP g]
-                              (NormalB $ UInfixE (VarE a) (VarE '(>>=)) $ UInfixE (VarE 'writer) (VarE '(.)) $ UInfixE (VarE $ mkName "runWriter") (VarE '(.)) (VarE g))
+                              (NormalB $ UInfixE (VarE a) (VarE '(>>=)) $ UInfixE inj (VarE '(.)) $ UInfixE run (VarE '(.)) (VarE g))
                               []
                           ]
                       ]
                 _ -> []
         let bimoduleDecs =
               do
-                InstanceD _ ct (AppT (AppT _IsWriter w) m) _ <- instances
-                InstanceD _ ct' (AppT (AppT _IsWriter w') n) _ <- instances
+                InstanceD _ ct (AppT cls m) _ <- instances
+                InstanceD _ ct' (AppT cls' n) _ <- instances
                 pure $
                   InstanceD
                     (Just Incoherent)
-                    ((ConT ''MonadWriter # w # VarT f) : (ConT ''MonadWriter # w' # VarT f) : ct ++ ct')
+                    ((classToMTLClass cls # VarT f) : (classToMTLClass cls' # VarT f) : ct ++ ct')
                     (ConT (mkName "BiModule") # m # n # VarT f)
                     []
         pure $ leftmoduleDecs ++ rightmoduleDecs ++ bimoduleDecs
