@@ -4,6 +4,9 @@
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE Safe #-}
+{-# LANGUAGE NoGeneralisedNewtypeDeriving #-}
+{-# OPTIONS_HADDOCK show-extensions #-}
 
 {- HLINT ignore "Use >>=" -}
 {- HLINT ignore "Use =<<" -}
@@ -17,7 +20,6 @@
 -- License     : LGPL-2
 -- Maintainer  : noiioiu@cocaine.ninja
 -- Stability   : experimental
--- Portability : not portable
 --
 -- This module should be used with @OverloadedRecordDot@ and/or @RebindableSyntax@ (and @RecordWildCards@).
 module Control.Monad.Action.Records where

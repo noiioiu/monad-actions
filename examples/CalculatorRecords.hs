@@ -4,7 +4,9 @@
 {-# LANGUAGE QualifiedDo #-}
 {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE Safe #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE NoGeneralisedNewtypeDeriving #-}
 
 module Main (main) where
 

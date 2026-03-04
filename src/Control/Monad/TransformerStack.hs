@@ -1,10 +1,20 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE Trustworthy #-}
 {-# LANGUAGE TypeData #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE NoGeneralisedNewtypeDeriving #-}
+{-# OPTIONS_HADDOCK show-extensions #-}
 
+-- |
+-- Module      : Control.Monad.TransformerStack
+-- Description : stacks of monad transformers
+-- Copyright   : © noiioiu
+-- License     : LGPL-2
+-- Maintainer  : noiioiu@cocaine.ninja
+-- Stability   : experimental
 module Control.Monad.TransformerStack
   ( MonadTransStack (..),
     IsState (..),

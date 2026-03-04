@@ -5,7 +5,6 @@
 -- License     : LGPL-2
 -- Maintainer  : noiioiu@cocaine.ninja
 -- Stability   : experimental
--- Portability : not portable
 --
 -- Operators for left monad actions.
 -- This module should be imported qualified, and can be used with the @QualifiedDo@ extension.

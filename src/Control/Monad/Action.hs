@@ -4,6 +4,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_HADDOCK show-extensions #-}
 
 -- |
 -- Module      : Control.Monad.Action
@@ -12,7 +13,6 @@
 -- License     : LGPL-2
 -- Maintainer  : noiioiu@cocaine.ninja
 -- Stability   : experimental
--- Portability : not portable
 --
 -- Given a monad \(M\) on a category \(\mathcal{D}\) with unit \(\eta\) and
 -- multiplication \(\mu\) and a functor \(F\) from \(\mathcal{C}\) to \(\mathcal{D}\),
