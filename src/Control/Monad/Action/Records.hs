@@ -229,6 +229,9 @@ instance (MonadState s m) => State s :<: m where
 instance (MonadState s m) => StateStrict.State s :<: m where
   inject = state . runState
 
+instance (MonadReader r m) => (->) r :<: m where
+  inject = reader
+
 instance (MonadReader r m) => Reader r :<: m where
   inject = reader . runReader
 
