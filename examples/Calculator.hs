@@ -1,3 +1,4 @@
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE QualifiedDo #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -147,7 +148,7 @@ toString = \case
     show' x = if '.' `elem` show x then reverse . dropWhile (== '.') . dropWhile (== '0') . reverse $ show x else show x
 
 main :: IO ()
-main = forever $ do
+main = forever do
   putStr "> "
   hFlush stdout
   x <- getLine
