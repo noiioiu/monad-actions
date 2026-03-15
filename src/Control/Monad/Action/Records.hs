@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -197,27 +198,27 @@ instance NE.NonEmpty :<: [] where
 
 -- | @'ReaderT'@ is just read-only @'StateT'@.
 instance (m :<: n) => ReaderT s m :<: StateT s n where
-  inject ReaderT {runReaderT} = StateT $ \s -> inject . fmap (,s) $ runReaderT s
+  inject ReaderT {runReaderT} = StateT \s -> inject . fmap (,s) $ runReaderT s
 
 -- | @'WriterT'@ is just append-only @'StateT'@.
 instance (Monoid s, m :<: n) => WriterT s m :<: StateT s n where
-  inject WriterT {runWriterT} = StateT $ \s -> inject @m @n . fmap (second (s <>)) $ runWriterT
+  inject WriterT {runWriterT} = StateT \s -> inject @m @n . fmap (second (s <>)) $ runWriterT
 
 -- | @'StateT'@ is just @'RWST'@ that ignores the read-only environment and doesn't append to the output.
 instance (Monoid w, m :<: n) => StateT s m :<: RWST r w s n where
-  inject StateT {runStateT} = RWST $ \_ s -> inject . fmap (\(a, t) -> (a, t, mempty)) $ runStateT s
+  inject StateT {runStateT} = RWST \_ s -> inject . fmap (\(a, t) -> (a, t, mempty)) $ runStateT s
 
 -- | @'ReaderT'@ is just @'RWST'@ that ignores the state and doesn't append to the output.
 --
 --   Note: @'inject' \@('ReaderT' s m) \@('StateT' s n) '.' 'inject' \@('StateT' s n) \@('RWST' s w s k) =/= 'inject' \@('ReaderT' s m) \@('RWST' s w s k)@
 instance (Monoid w, m :<: n) => ReaderT r m :<: RWST r w s n where
-  inject ReaderT {runReaderT} = RWST $ \r s -> inject . fmap (,s,mempty) $ runReaderT r
+  inject ReaderT {runReaderT} = RWST \r s -> inject . fmap (,s,mempty) $ runReaderT r
 
 -- | @'WriterT'@ is just @'RWST'@ that ignores the environment and state.
 --
 --   Note: @'inject' \@('WriterT' w m) \@('StateT' w n) '.' 'inject' \@('StateT' w n) \@('RWST' r w w k) =/= 'inject' \@('WriterT' w m) \@('RWST' r w w k)@
 instance (Monoid w, m :<: n) => WriterT w m :<: RWST r w s n where
-  inject WriterT {runWriterT} = RWST $ \_ s -> inject @m @n . fmap (\(a, w) -> (a, s, w)) $ runWriterT
+  inject WriterT {runWriterT} = RWST \_ s -> inject @m @n . fmap (\(a, w) -> (a, s, w)) $ runWriterT
 
 instance (MonadIO m) => IO :<: m where
   inject = liftIO
