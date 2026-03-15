@@ -1,5 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE OverloadedRecordDot #-}
 {-# LANGUAGE QualifiedDo #-}
 {-# LANGUAGE RebindableSyntax #-}

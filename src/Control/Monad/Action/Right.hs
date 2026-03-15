@@ -1,5 +1,3 @@
-{-# LANGUAGE MonoLocalBinds #-}
-
 -- |
 -- Module      : Control.Monad.Action.Right
 -- Description : operators for right monad actions

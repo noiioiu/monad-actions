@@ -56,7 +56,7 @@ library
    constraints >= 0.14.4 && < 0.15,
 
   hs-source-dirs: src
-  default-language: GHC2021
+  default-language: GHC2024
 
 flag examples
   description: Build examples
@@ -67,7 +67,7 @@ executable calculator
   import: warnings
   if !flag(examples)
     buildable: False
-  default-language: GHC2021
+  default-language: GHC2024
   hs-source-dirs: examples
   main-is: Calculator.hs
   build-depends:
@@ -79,7 +79,7 @@ executable calculator-records
   import: warnings
   if !flag(examples)
     buildable: False
-  default-language: GHC2021
+  default-language: GHC2024
   hs-source-dirs: examples
   main-is: CalculatorRecords.hs
   build-depends:
@@ -89,7 +89,7 @@ executable calculator-records
 
 test-suite monad-actions-test
   import: warnings
-  default-language: GHC2021
+  default-language: GHC2024
   type: exitcode-stdio-1.0
   hs-source-dirs: test
   main-is: Main.hs
