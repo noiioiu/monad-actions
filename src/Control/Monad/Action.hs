@@ -40,7 +40,7 @@ where
 
 import Control.Monad (join)
 import Control.Monad.Accum (MonadAccum (..))
-import Control.Monad.Action.TH (mkMTLActions, (#))
+import Control.Monad.Action.TH (mkMTLModules, (#))
 import Control.Monad.Codensity (Codensity (..))
 import Control.Monad.Error.Class (MonadError (..), liftEither)
 import Control.Monad.IO.Class (MonadIO (..))
@@ -226,15 +226,35 @@ instance {-# INCOHERENT #-} (MonadError e m) => RightModule (Either e) m where
 instance {-# INCOHERENT #-} (MonadError e m) => BiModule (Either e) (Either e) m
 
 -- | For every @'MonadReader'@ instance defined in "Control.Monad.Reader.Class", @'reader'@ is a monad homomorphism.
-$(mkMTLActions ''IsReader (VarE 'runReader) (VarE 'reader) (\case AppT _ r -> ConT ''MonadReader # r; _ -> TupleT 0))
+$( mkMTLModules
+     ''IsReader
+     (VarE 'runReader)
+     (VarE 'reader)
+     (\case AppT _ r -> ConT ''MonadReader # r; _ -> TupleT 0)
+ )
 
 -- | For every @'MonadWriter'@ instance defined in "Control.Monad.Writer.Class", @'writer' '.' 'runWriter'@ is a monad homomorphism.
-$(mkMTLActions ''IsWriter (VarE 'runWriter) (VarE 'writer) (\case AppT _ w -> ConT ''MonadWriter # w; _ -> TupleT 0))
+$( mkMTLModules
+     ''IsWriter
+     (VarE 'runWriter)
+     (VarE 'writer)
+     (\case AppT _ w -> ConT ''MonadWriter # w; _ -> TupleT 0)
+ )
 
 -- | For every @'MonadState'@ instance defined in "Control.Monad.State.Class", @'state' '.' 'runState'@ is a monad homomorphism.
-$(mkMTLActions ''IsState (VarE 'runState) (VarE 'state) (\case AppT _ s -> ConT ''MonadState # s; _ -> TupleT 0))
+$( mkMTLModules
+     ''IsState
+     (VarE 'runState)
+     (VarE 'state)
+     (\case AppT _ s -> ConT ''MonadState # s; _ -> TupleT 0)
+ )
 
-$(mkMTLActions ''IsRWS (VarE 'runRWS) (VarE 'rws) (\case AppT (AppT (AppT _ r) w) s -> ConT ''MonadRWS # r # w # s; _ -> TupleT 0))
+$( mkMTLModules
+     ''IsRWS
+     (VarE 'runRWS)
+     (VarE 'rws)
+     (\case AppT (AppT (AppT _ r) w) s -> ConT ''MonadRWS # r # w # s; _ -> TupleT 0)
+ )
 
 -- | For every lawful @'MonadAccum'@ instance, @'accum' '.' 'runAccum'@ is a monad homomorphism.
 instance {-# INCOHERENT #-} (MonadAccum w m) => LeftModule (Accum w) m where

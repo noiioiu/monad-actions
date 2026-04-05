@@ -4,8 +4,7 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
-{-# LANGUAGE Safe #-}
-{-# LANGUAGE NoGeneralisedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_HADDOCK show-extensions #-}
 
 {- HLINT ignore "Use >>=" -}
@@ -26,28 +25,29 @@ module Control.Monad.Action.Records where
 
 import Control.Monad qualified as M (join, (=<<))
 import Control.Monad.Accum (MonadAccum (..))
+import Control.Monad.Action.TH
 import Control.Monad.Codensity (Codensity (..))
 import Control.Monad.Error.Class (MonadError, liftEither)
 import Control.Monad.IO.Class (MonadIO (..))
-import Control.Monad.RWS (MonadRWS, RWS, RWST (..))
-import Control.Monad.RWS.CPS qualified as RWSCPS (RWS)
-import Control.Monad.RWS.Strict qualified as RWSStrict (RWS)
-import Control.Monad.Reader (MonadReader (..), Reader, ReaderT (..), runReader)
-import Control.Monad.State (MonadState (..), State, StateT (..))
-import Control.Monad.State.Strict qualified as StateStrict (State)
+import Control.Monad.RWS (MonadRWS, RWST (..))
+import Control.Monad.RWS.CPS ()
+import Control.Monad.RWS.Strict ()
+import Control.Monad.Reader (MonadReader (..), ReaderT (..))
+import Control.Monad.State (MonadState (..), StateT (..))
+import Control.Monad.State.Strict ()
 import Control.Monad.Trans.Accum (Accum, runAccum)
 import Control.Monad.Trans.Writer (WriterT (..))
-import Control.Monad.TransformerStack (IsRWS (..), IsState (..), IsWriter (..), MonadTransStack (..), rws)
-import Control.Monad.Writer (MonadWriter (..), Writer)
-import Control.Monad.Writer.CPS qualified as WriterCPS (Writer)
-import Control.Monad.Writer.Strict qualified as WriterStrict (Writer)
+import Control.Monad.TransformerStack
+import Control.Monad.Writer (MonadWriter (..))
+import Control.Monad.Writer.CPS ()
+import Control.Monad.Writer.Strict ()
 import Data.Bifunctor (second)
 import Data.Constraint (Dict (..))
 import Data.Functor.Compose (Compose (..))
 import Data.Kind (Constraint, Type)
 import Data.List.NonEmpty qualified as NE
 import Data.Maybe (maybeToList)
-import Data.Tuple (swap)
+import Language.Haskell.TH qualified as TH
 import Prelude hiding ((<*>), (=<<), (>>), (>>=))
 import Prelude qualified as P
 
@@ -223,41 +223,36 @@ instance (Monoid w, m :<: n) => WriterT w m :<: RWST r w s n where
 instance (MonadIO m) => IO :<: m where
   inject = liftIO
 
-instance (MonadState s m) => State s :<: m where
-  inject = state . runState
+$( mkMTLSubmonads
+     ''IsReader
+     (TH.VarE 'runReader)
+     (TH.VarE 'reader)
+     (\case TH.AppT _ r -> TH.ConT ''MonadReader # r; _ -> TH.TupleT 0)
+ )
 
-instance (MonadState s m) => StateStrict.State s :<: m where
-  inject = state . runState
+$( mkMTLSubmonads
+     ''IsState
+     (TH.VarE 'runState)
+     (TH.VarE 'state)
+     (\case TH.AppT _ s -> TH.ConT ''MonadState # s; _ -> TH.TupleT 0)
+ )
 
-instance (MonadReader r m) => (->) r :<: m where
-  inject = reader
+$( mkMTLSubmonads
+     ''IsWriter
+     (TH.VarE 'runWriter)
+     (TH.VarE 'writer)
+     (\case TH.AppT _ w -> TH.ConT ''MonadWriter # w; _ -> TH.TupleT 0)
+ )
 
-instance (MonadReader r m) => Reader r :<: m where
-  inject = reader . runReader
-
-instance (MonadWriter w m) => (,) w :<: m where
-  inject = writer . swap
-
-instance (MonadWriter w m) => Writer w :<: m where
-  inject = writer . runWriter
-
-instance (MonadWriter w m) => WriterCPS.Writer w :<: m where
-  inject = writer . runWriter
-
-instance (MonadWriter w m) => WriterStrict.Writer w :<: m where
-  inject = writer . runWriter
+$( mkMTLSubmonads
+     ''IsRWS
+     (TH.VarE 'runRWS)
+     (TH.VarE 'rws)
+     (\case TH.AppT (TH.AppT (TH.AppT _ r) w) s -> TH.ConT ''MonadRWS # r # w # s; _ -> TH.TupleT 0)
+ )
 
 instance (MonadAccum w m) => Accum w :<: m where
   inject = accum . runAccum
-
-instance (MonadRWS r w s m) => RWS r w s :<: m where
-  inject = rws . runRWS
-
-instance (MonadRWS r w s m) => RWSCPS.RWS r w s :<: m where
-  inject = rws . runRWS
-
-instance (MonadRWS r w s m) => RWSStrict.RWS r w s :<: m where
-  inject = rws . runRWS
 
 instance (MonadError e m) => Either e :<: m where
   inject = liftEither

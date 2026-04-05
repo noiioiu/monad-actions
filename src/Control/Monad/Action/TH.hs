@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeData #-}
 
-module Control.Monad.Action.TH (mkLiftBy, mkMTLActions, (#)) where
+module Control.Monad.Action.TH (mkLiftBy, mkMTLModules, (#), mkMTLSubmonads) where
 
 import Control.Monad (join)
 import Control.Monad.Trans
@@ -16,8 +16,33 @@ infixl 5 #
 (|->|) :: Type -> Type -> Type
 a |->| b = ArrowT # a # b
 
-mkMTLActions :: Name -> Exp -> Exp -> (Type -> Type) -> Q [Dec]
-mkMTLActions className run inj classToMTLClass =
+mkMTLSubmonads :: Name -> Exp -> Exp -> (Type -> Type) -> Q [Dec]
+mkMTLSubmonads className run inj classToMTLClass =
+  reify className
+    >>= \case
+      ClassI _ instances -> do
+        f <- newName "f"
+        a <- newName "a"
+        g <- newName "g"
+        let leftmoduleDecs =
+              instances >>= \case
+                InstanceD _ ct (AppT cls m) _ ->
+                  pure $
+                    InstanceD
+                      Nothing
+                      ((classToMTLClass cls # VarT f) : ct)
+                      (UInfixT m (mkName ":<:") (VarT f))
+                      [ ValD
+                          (VarP $ mkName "inject")
+                          (NormalB $ UInfixE inj (VarE '(.)) run)
+                          []
+                      ]
+                _ -> []
+        pure leftmoduleDecs
+      _ -> pure []
+
+mkMTLModules :: Name -> Exp -> Exp -> (Type -> Type) -> Q [Dec]
+mkMTLModules className run inj classToMTLClass =
   reify className
     >>= \case
       ClassI _ instances -> do
