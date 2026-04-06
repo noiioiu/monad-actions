@@ -4,11 +4,10 @@
 {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE NoGeneralisedNewtypeDeriving #-}
 
 module Main (main) where
 
-import Control.Applicative (Alternative (..), Applicative (pure, (*>), (<*)), optional)
+import Control.Applicative (Alternative (..), optional)
 import Control.Monad (forever, unless)
 import Control.Monad.Action.Records
 import Control.Monad.State hiding (get, put)
@@ -20,25 +19,11 @@ import Data.List
 import GHC.Records
 import System.IO
 import Text.Read hiding (get)
-import Prelude
-  ( Bool (..),
-    Double,
-    Eq (..),
-    Floating (..),
-    Fractional (..),
-    Maybe,
-    Monad,
-    Num (..),
-    Ord (..),
-    RealFloat,
-    Show (..),
-    String,
-    Traversable (..),
-    const,
-    id,
-    maybe,
-    ($),
-    (.),
+import Prelude hiding
+  ( (<*>),
+    (=<<),
+    (>>),
+    (>>=),
   )
 import Prelude qualified as P
 
