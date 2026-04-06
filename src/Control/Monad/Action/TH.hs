@@ -1,6 +1,12 @@
 {-# LANGUAGE TemplateHaskellQuotes #-}
 {-# LANGUAGE TypeData #-}
 
+-- |
+-- Module      : Control.Monad.Action.TH
+-- Copyright   : © noiioiu
+-- License     : LGPL-2
+-- Maintainer  : noiioiu@cocaine.ninja
+-- Stability   : experimental
 module Control.Monad.Action.TH (mkLiftBy, mkMTLModules, (#), mkMTLSubmonads) where
 
 import Control.Monad (join)
@@ -22,8 +28,6 @@ mkMTLSubmonads className run inj classToMTLClass =
     >>= \case
       ClassI _ instances -> do
         f <- newName "f"
-        a <- newName "a"
-        g <- newName "g"
         let leftmoduleDecs =
               instances >>= \case
                 InstanceD _ ct (AppT cls m) _ ->
